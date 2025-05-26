@@ -1,1 +1,12 @@
+.Rproj.user
 *.DS_store
+Data/data-products/hexid-observations_preomicron_meta30m.csv
+Data/data-sources/covidestim-observations.csv
+Data/data-sources/observations_preomicron.dbf
+Data/data-sources/observations_preomicron.shp
+Data/data-sources/observations_preomicron.shx
+Data/data-sources/observations_preomicron.zip
+Data/data-sources/tsa_meta30m_run_preomicron_daily.csv
+Data/data-sources/tsa_meta30m_run_preomicron_daily.csv.zip
+Data/data-sources/tsa_preomicron.csv
+Data/data-sources/tsa_preomicron.csv.zip
