@@ -11,18 +11,18 @@ library(purrr,    warn.conflicts = F)
 library(progress, warn.conflicts = F)
 
 ## Hexgrid
-hexgrid <- st_read("data-products/geo-hexes/hexes.geojson") |> 
+hexgrid <- st_read("Data/data-sources/hexes.geojson") |> 
   filter(as.integer(hexid) < 7662) |> ## Filtering out Puerto Rico hexes
   st_transform(crs = 26915)
 
 ## New hexgrid with Meta 30m population
-hexgrid_pop <- st_read("data-products/geo-hexes/meta_population/hexgrid_meta30m_population.geojson") |> 
+hexgrid_pop <- st_read("Data/data-sources/hexgrid_meta30m_population.geojson") |> 
   filter(as.integer(hexid) < 7662) |> ## Filtering out Puerto Rico hexes
   st_transform(crs = 26915) |>
   rename(population = metapop_30m)
 
 ## Observations
-observationsFips <- st_read("data-products/geo-hexes/observations_preomicron.shp") |> 
+observationsFips <- st_read("Data/data-sources/observations_preomicron.shp") |> 
   st_cast(to = "POLYGON")
 
 #### Also set a test date for the plots throughout the workflow
@@ -273,61 +273,54 @@ hexObservationsAllNoMissingGeom <- full_join(hexObservationsAllNoMissing,
                                              hexgrid,
                                              by = "hexid")
 
-hexObservationsAllNoMissingGeom <- hexObservationsAllNoMissingGeom |> 
-  select(-geometry.x) |> 
-  rename(geometry = geometry.y) |> 
-  st_as_sf() |> 
-  # st_transform(crs = 'ESRI:102009') |> 
-  # st_transform(crs = 26915)
-  mutate(date = as.Date(date))
+### For reproducibility we divided the main product here into 4 .csv files
+hexObservationsAllNoMissingGeom <- vroom::vroom("Data/data-products/hexid-observations_preomicron_meta30m.csv")
 
-## Testing the map at Alpha peak date and 3 others, and Delta peak date and 3 others
-## peak date
-alpha_peak <- as.Date("2020-11-19")
-delta_peak <- as.Date("2021-09-08")
+dates <- unique(na.omit(hexObservationsAllNoMissingGeom$date))
 
-testDates <- c(c(alpha_peak-63,
-                 alpha_peak-45, 
-                 alpha_peak-24, 
-                 alpha_peak),
-               c(delta_peak-63,
-                 delta_peak-45, 
-                 delta_peak-24, 
-                 delta_peak))
+## Part - 1
+dates1 <- dates[1:162]
 
-hextest <- hexObservationsAll %>% 
-  select(-geometry) |> 
-  mutate(date = as.Date(date)) |> 
-  filter(date %in% testDates) |> 
-  left_join(hexes) |> 
-  st_as_sf()
+hexObservations.1 <- hexObservationsAllNoMissingGeom |> 
+  filter(date %in% dates1)
 
-ggplot() +
-  geom_sf(hextest,
-          mapping=aes(fill=infectionsPC)) +
-  scale_fill_viridis_b(name = "Estimated Infections/100k/day",
-                       breaks = scales::breaks_extended(n = 7),
-                       limits = c(0,350),
-                       option = "magma")+
-  theme_minimal()+
-  facet_wrap(.~date, nrow = 2)
-  # geom_sf(hexObservationsAllNoMissingGeom %>% filter(date == testDate,
-  #                                                    infectionsPC == 0),
-  #         mapping=aes(), fill="green")
+vroom::vroom_write(x = hexObservations.1,
+                   file = "Data/data-products/hexid-observations_preomicron_meta30m_part1.csv.xz")
 
+## Part - 2
+dates2 <- dates[163:326]
 
+hexObservations.2 <- hexObservationsAllNoMissingGeom |> 
+  filter(date %in% dates2)
 
-###############################################################################
-###### Save an SF for plots 
-###############################################################################
-# geojson_write(
-#   hexObservationsAllNoMissingGeom,
-#   geometry  = "polygon",
-#   file      = paste0("data-products/geo-hexes/hexid-observations_preomicron_meta30m.geojson"),
-#   crs = st_crs(hexObservationsAllNoMissingGeom),
-#   overwrite = T,
-# )
+vroom::vroom_write(x = hexObservations.2,
+                   file = "Data/data-products/hexid-observations_preomicron_meta30m_part2.csv.xz")
 
-st_write(obj = hexObservationsAllNoMissingGeom,
-         paste0("data-products/geo-hexes/hexid-observations_omicronera_meta30m.geojson"),
-         delete_dsn = T)
+## Part - 3
+dates3 <- dates[327:486]
+
+hexObservations.3 <- hexObservationsAllNoMissingGeom |> 
+  filter(date %in% dates3)
+
+vroom::vroom_write(x = hexObservations.3,
+                   file = "Data/data-products/hexid-observations_preomicron_meta30m_part3.csv.xz")
+
+## Part - 4
+dates4 <- dates[487:649]
+
+hexObservations.4 <- hexObservationsAllNoMissingGeom |> 
+  filter(date %in% dates4)
+
+vroom::vroom_write(x = hexObservations.4,
+                   file = "Data/data-products/hexid-observations_preomicron_meta30m_part4.csv.xz")
+
+## Producing back the whole dataset with infections allocated to the hexgrid
+
+hexObservationsRebuild <- rbind(hexObservations.1, hexObservations.2, hexObservations.3, hexObservations.4)
+all.equal(hexObservationsAllNoMissingGeom, hexObservationsRebuild)
+## TRUE
+
+## Too big to be pushed to the github repo, only for writing as .geojson
+# st_write(obj = hexObservationsAllNoMissingGeom,
+#          paste0("data-products/geo-hexes/hexid-observations_omicronera_meta30m.geojson"),
+#          delete_dsn = T)

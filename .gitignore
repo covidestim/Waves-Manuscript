@@ -1,7 +1,14 @@
+.git/objects/pack/tmp_pack_q6NR0w
 .Rproj.user
 *.DS_store
+Data/data-products/CAR_list_meta30m.RDS
 Data/data-products/hexid-observations_preomicron_meta30m.csv
+Data/data-products/tsa_meta30m_run_preomicron_daily.csv
+Data/data-products/tsa_meta30m_run_preomicron_daily.csv.zip
+Data/data-products/tsa_preomicron.csv
+Data/data-products/tsa_preomicron.csv.zip
 Data/data-sources/covidestim-observations.csv
+Data/data-sources/hexid-observations_preomicron_meta30m.csv
 Data/data-sources/observations_preomicron.dbf
 Data/data-sources/observations_preomicron.shp
 Data/data-sources/observations_preomicron.shx

@@ -2,17 +2,22 @@
 library(tidyverse)
 library(sf)
 
-CAR_df2 <- vroom::vroom("data-products/tsa_meta30m_run_preomicron_daily.csv")|>
+CAR_df2 <- vroom::vroom("Data/data-products/tsa_meta30m_run_preomicron_daily.csv")|>
   dplyr::mutate(cases_fitted = mean,
                 incidence_fitted = exp(log10(cases_fitted+1) - logpopulation)*1e5,
                 log_incidence = log10(incidence_fitted+1))
 
-hexes_to_keep <- st_read("data-products/geo-hexes/hexid_to_keep.geojson")
+hexes_to_keep <- st_read("Data/data-sources/hexid_to_keep.geojson")
 
-# CAR_df2 <- bind_rows(CAR_list) |>
-#   filter(date != dates_to_rerun)
+load("Data/data-products/CAR_list_meta30m.RDS")
 
-hexes <- sf::st_read("data-products/geo-hexes/hexes.shp") |> 
+## Saving as list object
+# save(list = CAR_list, 
+#      file = "data-products/CAR_list_meta30m.RDS", 
+#      compress = "xz", 
+#      compression_level = 9)
+
+hexes <- sf::st_read("Data/data-sources/hexes.geojson") |> 
   filter(as.integer(hexid) < 7662,
          ## Taking out the isolated hex at Keywest
          as.integer(hexid) != 6545,
@@ -282,7 +287,7 @@ for (i in weeks) {
 }
 
 ## Population hexes
-hex_pop <- sf::st_read("data-products/geo-hexes/meta_population/hexgrid_meta30m_population.geojson") |> 
+hex_pop <- sf::st_read("Data/data-sources/hexgrid_meta30m_population.geojson") |> 
   filter(as.integer(hexid) < 7662,
          ## Taking out the isolated hex at Keywest
          as.integer(hexid) != 6545) |> ## Filtering out Puerto Rico hexes

@@ -1,5 +1,5 @@
-gc()
 rm(list = ls())
+gc()
 
 library(tidyverse)
 library(sf)
@@ -8,30 +8,29 @@ library(spatialreg)
 library(Matrix)
 
 ## 
-hexes <- sf::st_read("data-products/geo-hexes/hexes.shp") |> 
-  filter(as.integer(hexid) < 7662,
-         ## Taking out the isolated hex at Keywest
-         as.integer(hexid) != 6545) |> 
-  st_transform(crs = 4326) |> 
-  mutate(hexid = as.character(1:n()))
-
-## Hexgrid pop
-## New hexgrid with Meta 30m population
-hexgrid_pop <- st_read("data-products/geo-hexes/meta_population/hexgrid_meta30m_population.geojson") |> 
+hexes <- sf::st_read("Data/data-sources/hexes.geojson") |> 
   filter(as.integer(hexid) < 7662,
          ## Taking out the isolated hex at Keywest
          as.integer(hexid) != 6545) |> 
   st_transform(crs = 26915) |>
-  rename(population = metapop_30m) |> 
-  filter(population > 0)
+  mutate(hexid = as.character(1:n()))
+
+## Hexgrid pop
+## New hexgrid with Meta 30m population
+hexgrid_pop <- st_read("Data/data-sources/hexgrid_meta30m_population.geojson") |> 
+  filter(as.integer(hexid) < 7662,
+         ## Taking out the isolated hex at Keywest
+         as.integer(hexid) != 6545) |> 
+  st_transform(crs = 26915) |>
+  rename(population = metapop_30m)
 
 ## Only keep hexes with a less than 10 cumulative infections per capita
-hexgrid_preomicron_cum <- vroom::vroom("data-products/geo-hexes/hexid-observations_preomicron_meta30m.csv") |> 
-  # hexObservationsAllSF |>
+hexgrid_preomicron_cum <- vroom::vroom("Data/data-products/hexid-observations_preomicron_meta30m.csv") |> 
   st_drop_geometry() |>
   mutate(hexid = as.character(hexid),
          infections = case_when(infections > population ~ population,
-                                population == 0 ~ 0)) |>
+                                population == 0 ~ 0,
+                                TRUE ~ infections)) |>
   group_by(hexid) |> 
   summarise(cum_infections = sum(infections, na.rm = T)) |> 
   right_join(hexgrid_pop |>  
@@ -49,9 +48,9 @@ hexid_to_keep <- hexgrid_preomicron_cum |>
   filter(population > 0) |> 
   filter(cum_infectionsPC<= 10)
 
-vroom::vroom_write(x = hexid_to_keep, file = "data-sources/hexid_to_keep.csv")
+vroom::vroom_write(x = hexid_to_keep, file = "Data/data-sources/hexid_to_keep.csv")
 write_sf(obj = hexid_to_keep,
-         dsn = "data-products/geo-hexes/hexid_to_keep.geojson",
+         dsn = "Data/data-sources/hexid_to_keep.geojson",
          delete_dsn = T,
          delete_layer = T)
 
@@ -64,35 +63,34 @@ write_sf(obj = hexid_to_keep,
 #   st_as_sf()
 
 ## New hexgrid and new hexgrid with Meta 30m population
-hexes <- sf::st_read("data-products/geo-hexes/hexes.shp") |> 
+hexes <- sf::st_read("Data/data-sources/hexes.geojson") |> 
   filter(as.integer(hexid) < 7662,
          ## Taking out the isolated hex at Keywest
          as.integer(hexid) != 6545,
-         hexid %in% hexid_to_keep$hexid) |> 
-  st_transform(crs = 4326) |> 
-  mutate(hexid = as.character(1:n()))
+         ## Now filtering out the high infections per capita hex
+         as.integer(hexid) %in% as.integer(hexid_to_keep$hexid)) |> 
+  st_transform(crs = 26915)
 
-## Certifying the correct number of unique hex; 7364
+## Certifying the correct number of unique hex; 7352
 length(unique(na.omit(hexes$hexid)))
 
-hexpop <- st_read("data-products/geo-hexes/meta_population/hexgrid_meta30m_population.geojson") |> 
+hexpop <- st_read("Data/data-sources/hexgrid_meta30m_population.geojson") |> 
   filter(as.integer(hexid) < 7662,
          ## Taking out the isolated hex at Keywest
          as.integer(hexid) != 6545,
-         hexid %in% hexid_to_keep$hexid) |> 
+         as.integer(hexid) %in% as.integer(hexid_to_keep$hexid)) |> 
   st_transform(crs = 26915) |>
-  rename(population = metapop_30m) |> 
-  filter(population >= 1)
+  rename(population = metapop_30m)
 
-## Certifying the correct number of unique hex; 7364
-length(unique(na.omit(hexes$hexid)))
+## Certifying the correct number of unique hex; 7352
+length(unique(na.omit(hexpop$hexid)))
 
 ## Neighbors
 hexes_nb <- spdep::poly2nb(hexes, queen = TRUE, row.names = hexes$hexid)
 # hexes_nb2 <- st_touches(st_geometry(hexes))
 
-nb2INLA("data-products/hexes_adjmat.graph", nb = hexes_nb)
-hexes_graph <- INLA::inla.read.graph("data-products/hexes_adjmat.graph")
+nb2INLA("Data/data-products/hexes_adjmat.graph", nb = hexes_nb)
+hexes_graph <- INLA::inla.read.graph("Data/data-products/hexes_adjmat.graph")
 
 # wt_B <- nb2mat(neighbours = hexes_nb, style = "B", zero.policy = T)
 wt_W <- nb2mat(neighbours = hexes_nb, style = "W", zero.policy = T)
@@ -105,20 +103,21 @@ listW <- nb2listw(neighbours = hexes_nb, style = "W", zero.policy = T)
 W <- as(listW, "CsparseMatrix")
 
 ## Population hexes
-hex_population <- sf::st_read("data-products/geo-hexes/meta_population/hexgrid_meta30m_population.geojson") |> 
+hex_population <- sf::st_read("Data/data-sources/hexgrid_meta30m_population.geojson") |> 
   filter(as.integer(hexid) < 7662,
          ## Taking out the isolated hex at Keywest
          as.integer(hexid) != 6545,
-         hexid %in% hexid_to_keep$hexid) |> 
+         as.integer(hexid) %in% as.integer(hexid_to_keep$hexid)) |> 
   st_transform(crs = 26915) |>
   rename(population = metapop_30m) |> 
   mutate(logpopulation = log(population))
 
-## Certifying the correct number of unique hex; 7364
-length(unique(na.omit(hexes$hexid)))
+## Certifying the correct number of unique hex; 7352
+length(unique(na.omit(hex_population$hexid)))
 
 ## Pre-Omicron
-hexgrid_preomicron <- vroom::vroom("data-products/geo-hexes/hexid-observations_preomicron_meta30m.csv") |>
+## Remember to rebuild the full dataset from the four parts in code 01-hexAllocation_Infections_Meta30m.R
+hexgrid_preomicron <- vroom::vroom("Data/data-products/hexid-observations_preomicron_meta30m.csv") |>
   mutate(hexid = as.character(hexid),
          date = as.Date(date)) |>
   select(-geometry) |>
@@ -126,11 +125,14 @@ hexgrid_preomicron <- vroom::vroom("data-products/geo-hexes/hexid-observations_p
   filter(as.integer(hexid) < 7662,
          ## Taking out the isolated hex at Keywest
          as.integer(hexid) != 6545,
-         hexid %in% hexid_to_keep$hexid) |> 
-  left_join(hexes, by = "hexid") |>
-  sf::st_as_sf()
+         as.integer(hexid) %in% as.integer(hexid_to_keep$hexid)) 
 
-## Certifying the correct number of unique hex; 7364
+# |> 
+#   left_join(hexes, by = "hexid") |>
+#   sf::st_as_sf() |> 
+#   st_transform(crs = 26915)
+
+## Certifying the correct number of unique hex; 7352(?)
 length(unique(na.omit(hexgrid_preomicron$hexid)))
 
 ## Function to push all dates to the end of the epidemiological week
@@ -159,13 +161,13 @@ hex_spacetime <- expand.grid(hexid = as.character(unique(hexes$hexid)),
                              date = seq.Date(from = min(hexgrid_preomicron$date),
                                              to = max(hexgrid_preomicron$date), 
                                              by = "day")) |> 
-  left_join(hex_population |>
-              mutate(hexid = as.character(hexid)) |>
-              st_drop_geometry()) |>
+  # left_join(hex_population |>
+  #             mutate(hexid = as.character(hexid)) |>
+  #             st_drop_geometry()) |>
   left_join(hexgrid_preomicron |> 
               st_drop_geometry() |> 
               # rename(date = weekdate) |> 
-              select(hexid, date, infections)) |>  ## just join the desired columns, we have the geometry
+              select(hexid, date, infections, population)) |>  ## just join the desired columns, we have the geometry
   # st_as_sf()|> 
   mutate(Time = as.numeric(date - min(date)) + 1,
          ID = as.numeric(hexid),
@@ -177,7 +179,7 @@ hex_spacetime <- expand.grid(hexid = as.character(unique(hexes$hexid)),
          infectionsPC = (infections/population)*1e5,
          logpopulation = log10(population+1))
 
-## Certifying the correct number of unique hex; 7364
+## Certifying the correct number of unique hex; 7352(?)
 length(unique(na.omit(hex_spacetime$hexid)))
 
 ## Returning the data.frame into a list format
@@ -257,16 +259,19 @@ diag.eps = 1e-3
 
 weeks <- sort(unique(na.omit(hex_spacetime$date)))
 
-hex_graph <- inla.read.graph("data-products/hexes_adjmat.graph")
+hex_graph <- INLA::inla.read.graph("Data/data-products/hexes_adjmat.graph")
 
 # CAR_list <- foreach(i = 1:length(weeks),
 #                     .combine = c,
 #                     .multicombine = TRUE) %dopar% {
 
-CAR_list <- vroom::vroom("data-products/tsa_meta30m_run_preomicron_daily.csv")
+CAR_df <- vroom::vroom("Data/data-products/tsa_meta30m_run_preomicron_daily.csv")
 
 CAR_list <- CAR_df |> 
   group_split(date)
+
+## Loading from the RDS
+CAR_list <- load("Data/data-products/CAR_list_meta30m.RDS")
 
 ## Rerun flag, set this to TRUE is the dates to rerun are a lot to get better model estimates
 is.rerun <- TRUE
@@ -279,7 +284,7 @@ dates_to_rerun <- sapply(CAR_list, function(x){ifelse(sd(x$sd)<0.0025 || sd(x$sd
 dates_to_rerun
 length(na.omit(dates_to_rerun))
 
-sd_values <- data.frame(weeks = weeks, 
+sd_values <- data.frame(weeks = test_dates, 
                         sd = sapply(CAR_list, function(x){sd(x$sd)}),
                         upper = sapply(CAR_list, function(x){max(x$sd)}),
                         lower = sapply(CAR_list, function(x){sd(x$sd)})) |> 
@@ -294,6 +299,10 @@ ggplot(data = sd_values,
   geom_label()+
   # geom_pointrange()+
   theme_minimal()
+
+## Peak dates
+alpha_peak <- as.Date("2020-11-19")
+delta_peak <- as.Date("2021-09-04")
 
 ## Alpha wave convergence analysis
 ## Alpha Peak Movie
@@ -330,30 +339,32 @@ ggplot(data = sd_values_delta,
   theme_minimal()
 
 ## Uncomment when is not a rerun
-# CAR_list <- list()
+CAR_list <- list()
 
-# alpha_peak <- as.Date("2020-11-19")
-# delta_peak <- as.Date("2021-09-04")
-# 
-# test_dates <- c(c(alpha_peak-63,
-#                   alpha_peak-45, 
-#                   alpha_peak-24, 
-#                   alpha_peak),
-#                 c(delta_peak-63,
-#                   delta_peak-45, 
-#                   delta_peak-24, 
-#                   delta_peak))
+alpha_peak <- as.Date("2020-11-19")
+delta_peak <- as.Date("2021-09-04")
+
+test_dates <- c(c(alpha_peak-63,
+                  alpha_peak-45,
+                  alpha_peak-24,
+                  alpha_peak),
+                c(delta_peak-63,
+                  delta_peak-45,
+                  delta_peak-24,
+                  delta_peak))
 
 ## This fitting takes very long, it is process of prune fitting. Where it starts fitting something and narrows down to a best fit, which parameteres are defined at the while loop
 
-for (i in 1:length(weeks)) {
+for (i in 1:length(test_dates)) {
+# for (i in 1:length(weeks)) {
   
   ## To clean unused variables here
-  gc()
+  # gc()
   
   if(is.na(dates_to_rerun[i]))next
   
-  current_date <- weeks[i]
+  # current_date <- weeks[i]
+  current_date <- test_dates[i]
   hex_week <- hex_spacetime %>% 
     filter(date == current_date)
   
@@ -368,7 +379,7 @@ for (i in 1:length(weeks)) {
   # trials <- 0
   # while (hess.min <= 0 & trials < 50){
     
-  while ((sd(sd_values)<0.0025 || sd(sd_values) > 0.010) & counter <= 10) {  # Flipped condition
+  while ((sd(sd_values)<0.0025 || sd(sd_values) > 0.010) & counter <= 50) {  # Flipped condition
     tryCatch({
       set.seed(.Random.seed)
       
@@ -376,7 +387,7 @@ for (i in 1:length(weeks)) {
         as.formula(infectionsPC ~ 1 + 
                      f(ID, 
                        model = "besag2",
-                       graph = "data-products/hexes_adjmat.graph",
+                       graph = "Data/data-products/hexes_adjmat.graph",
                        scale.model = TRUE,
                        diagonal = diag.eps,
                        constr = TRUE,
@@ -385,10 +396,10 @@ for (i in 1:length(weeks)) {
         family = "gaussian",
         control.inla = control.inla(strategy = "laplace"),
         # control.inla = control.inla(strategy = "gaussian", h = h.value, int.strategy = "eb"),
-        # control.mode = control.mode(restart = TRUE),
+        control.mode = control.mode(restart = TRUE),
         control.compute = compute_list,
         control.predictor = predictor_list,
-        # control.fixed = list(prec.intercept = 0.1),
+        control.fixed = list(prec.intercept = 0.1),
         num.threads = 6,  # Prevent internal threading conflicts
         # verbose = T
       )
@@ -411,10 +422,10 @@ for (i in 1:length(weeks)) {
         family = "gaussian",
         control.inla = control.inla(strategy = "gaussian", int.strategy = "eb"),
         # control.inla = control.inla(strategy = "gaussian", h = h.value, int.strategy = "eb"),
-        # control.mode = control.mode(restart = TRUE),
+        control.mode = control.mode(restart = TRUE),
         control.compute = compute_list,
         control.predictor = predictor_list,
-        # control.fixed = list(prec.intercept = 0.1),
+        control.fixed = list(prec.intercept = 0.1),
         num.threads = 6,  # Prevent internal threading conflicts
         # verbose = T
       )
@@ -437,12 +448,20 @@ for (i in 1:length(weeks)) {
           best_model$summary.fitted.values |> 
             rownames_to_column(var = "INLApred"))
   
-  gc()
+  # gc()
   rm(best_model, hex_week)
   # )
 }
 
 # stopCluster(cl)
+
+## Saving as list object
+save(list = CAR_list, 
+     file = "Data/data-products/CAR_list_meta30m.RDS", 
+     compress = "xz", 
+     compression_level = 9)
+
+load("Data/data-products/CAR_list_meta30m.RDS")
 
 ## Turning into a df
 CAR_df <- bind_rows(CAR_list)
@@ -465,12 +484,6 @@ breaks_plt <- c(0,seq(250,2500, 250))
 labels_plt <- c("250< ",seq(250,2250, 250), ' >2,500')
 limits_plt <- c(0,2500)
 
-## Breakdowns of each peaks
-breaks_plt1 <- seq(0,500, 50)
-labels_plt1 <- c("<50",seq(50,450, 50), '>500')
-limits_plt1 <- c(0,500)
-color_option <- "magma"
-
 # CAR_model <- best_model
 family <- "gaussian"
 model <- "besag2"
@@ -489,19 +502,54 @@ us_states <- tigris::states(cb = T) |>
   tigris::shift_geometry()|> 
   st_transform(crs = 26915)
 
+# i=325
+
+alpha_peak <- as.Date("2020-11-19")
+delta_peak <- as.Date("2021-09-04")
+
+test_dates <- c(c(alpha_peak-63,
+                  alpha_peak-45,
+                  alpha_peak-24,
+                  alpha_peak),
+                c(delta_peak-63,
+                  delta_peak-45,
+                  delta_peak-24,
+                  delta_peak))
+
+index <- which(weeks %in% test_dates)
+
+CAR_dates <- bind_rows(CAR_list[index]) |> 
+  left_join(hexes) |> 
+  st_as_sf()
+
+hex_spacetime_date <- hex_spacetime |> 
+  filter(date %in% test_dates)|> 
+  left_join(hexes) |> 
+  st_as_sf()
+
+hexgrid_preomicron_date <- hexgrid_preomicron |> 
+  st_drop_geometry() |> 
+  filter(date %in% test_dates)|> 
+  left_join(hexes) |> 
+  st_as_sf()
+
+hexObservations <- hexObservationsAllNoMissingGeom|> 
+  select(-geometry) |> 
+  filter(date %in% test_dates)|> 
+  mutate(hexid = as.character(hexid)) |> 
+  left_join(hexes) |> 
+  st_as_sf()
+
+## Breakdowns of each peaks
+breaks_plt1 <- seq(0,500, 50)
+labels_plt1 <- c("<50",seq(50,450, 50), '>500')
+limits_plt1 <- c(0,500)
+color_option <- "magma"
+
 ggplot() +
-  geom_sf(data = hexes|>
-            dplyr::mutate(population = hex_population$population,
-                          logpopulation = hex_population$logpopulation) |>
-            dplyr::mutate(cases_fitted = best_model$summary.fitted.values$mean,
-                          incidence_fitted = exp(log10(cases_fitted+1) - logpopulation)*1e5,
-                          log_incidence = log10(incidence_fitted+1)) |>
-            # filter(infections > 1) |>
+  geom_sf(data = hexgrid_preomicron_date |> 
             st_transform(crs = 26915),
-          aes(fill = cases_fitted))+
-  # geom_sf(data = us_states, color = "white", fill = "transparent")+
-  # geom_sf(data = roads, color = "deeppink")+
-  # scale_fill_viridis_c(option = color_option, name = "Estimated Infections/100k/day", direction = -1)+
+          aes(fill = infectionsPC))+
   scale_fill_viridis_b(option = color_option,
                        name = "Estimated Infections/100k/day",
                        direction = -1,
@@ -513,7 +561,8 @@ ggplot() +
   theme_minimal()+
   theme(legend.position = "bottom",
         legend.title.position = "top",
-        legend.key.width = grid::unit(1, "in"))
+        legend.key.width = grid::unit(1, "in"))+
+  facet_wrap(.~date, nrow = 2)
 # +
   # guides(fill = guide_bins(title = "Infections per capita/100k",
   #                          # labels = scales::label_math(expr = 10^., format = "force"),
@@ -522,4 +571,27 @@ ggplot() +
   # labs(title = "InfectionsPC", subtitle = delta_peak)+
   # labs(subtitle = paste0("CAR model with ", model," implementation and ", family, " likelihood"),
        # caption = "*Proportional weights means weights ranging from 1 to 0")
+
+CAR_df <- bind_rows(CAR_list) |> 
+  left_join(hexes) |> 
+  st_as_sf() |> 
+  st_transform(crs = 26915)
+
+ggplot() +
+  geom_sf(data = CAR_df,
+          aes(fill = mean))+
+  scale_fill_viridis_c(option = color_option, direction = -1)+
+  # scale_fill_viridis_b(option = color_option,
+  #                      name = "Estimated Infections/100k/day",
+  #                      direction = -1,
+  #                      breaks = breaks_plt1,
+  #                      labels = labels_plt1,
+  #                      na.value = "steelblue4",
+  #                      limits = limits_plt1
+  # )+
+  theme_minimal()+
+  theme(legend.position = "bottom",
+        legend.title.position = "top",
+        legend.key.width = grid::unit(1, "in"))+
+  facet_wrap(.~date, nrow = 2)
 
