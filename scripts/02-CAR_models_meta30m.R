@@ -7,30 +7,14 @@ library(spdep)
 library(spatialreg)
 library(Matrix)
 
-## 
-hexes <- sf::st_read("Data/data-sources/hexes.geojson") |> 
-  filter(as.integer(hexid) < 7662,
-         ## Taking out the isolated hex at Keywest
-         as.integer(hexid) != 6545) |> 
-  st_transform(crs = 26915) |>
-  mutate(hexid = as.character(1:n()))
-
 ## Hexgrid pop
 ## New hexgrid with Meta 30m population
 hexgrid_pop <- st_read("Data/data-sources/hexgrid_meta30m_population.geojson") |> 
-  filter(as.integer(hexid) < 7662,
-         ## Taking out the isolated hex at Keywest
-         as.integer(hexid) != 6545) |> 
-  st_transform(crs = 26915) |>
   rename(population = metapop_30m)
 
 ## Only keep hexes with a less than 10 cumulative infections per capita
-hexgrid_preomicron_cum <- vroom::vroom("Data/data-products/hexid-observations_preomicron_meta30m.csv") |> 
-  st_drop_geometry() |>
-  mutate(hexid = as.character(hexid),
-         infections = case_when(infections > population ~ population,
-                                population == 0 ~ 0,
-                                TRUE ~ infections)) |>
+hexgrid_preomicron_cum <- vroom::vroom("Data/data-products/hexid-observations_preomicron05-31-25NOGEOM.csv") |> 
+  mutate(hexid = as.character(hexid)) |> 
   group_by(hexid) |> 
   summarise(cum_infections = sum(infections, na.rm = T)) |> 
   right_join(hexgrid_pop |>  
@@ -43,50 +27,33 @@ hexgrid_preomicron_cum <- vroom::vroom("Data/data-products/hexid-observations_pr
                 cum_incidence = exp(log10(cum_infections) - logpopulation),
                 log_incidence = log10(cum_incidence+1))
 
-## Filter for only the hexes we are keep to the analysis
-hexid_to_keep <- hexgrid_preomicron_cum |> 
-  filter(population > 0) |> 
-  filter(cum_infectionsPC<= 10)
-
-vroom::vroom_write(x = hexid_to_keep, file = "Data/data-sources/hexid_to_keep.csv")
-write_sf(obj = hexid_to_keep,
-         dsn = "Data/data-sources/hexid_to_keep.geojson",
-         delete_dsn = T,
-         delete_layer = T)
-
-# ## Loading centroids shapefile
-# hexes_centroids <- as.data.frame(st_coordinates(st_cast(st_centroid(hexes), "MULTIPOINT"))) |> 
-#   rename(hexid = L1) |> 
-#   mutate(hexid = as.character(hexid)) |> 
-#   left_join(hexes) |> 
-#   mutate(geometry = st_centroid(geometry)) |> 
-#   st_as_sf()
-
-## New hexgrid and new hexgrid with Meta 30m population
-hexes <- sf::st_read("Data/data-sources/hexes.geojson") |> 
-  filter(as.integer(hexid) < 7662,
-         ## Taking out the isolated hex at Keywest
-         as.integer(hexid) != 6545,
-         ## Now filtering out the high infections per capita hex
-         as.integer(hexid) %in% as.integer(hexid_to_keep$hexid)) |> 
-  st_transform(crs = 26915)
-
-## Certifying the correct number of unique hex; 7352
-length(unique(na.omit(hexes$hexid)))
-
-hexpop <- st_read("Data/data-sources/hexgrid_meta30m_population.geojson") |> 
-  filter(as.integer(hexid) < 7662,
-         ## Taking out the isolated hex at Keywest
-         as.integer(hexid) != 6545,
-         as.integer(hexid) %in% as.integer(hexid_to_keep$hexid)) |> 
-  st_transform(crs = 26915) |>
-  rename(population = metapop_30m)
-
-## Certifying the correct number of unique hex; 7352
-length(unique(na.omit(hexpop$hexid)))
+# ### Cumulative plot test
+ggplot() +
+  geom_sf(hexgrid_preomicron_cum |>
+            # filter(population >0 & cum_infectionsPC <=10)|> ## uncomment if you wanna check the flatten figures
+            st_transform(crs = 'ESRI:102009'),
+          mapping=aes(fill = log10(population+1))) +
+  geom_sf(us_states,
+          mapping=aes(),
+          color = "black",
+          fill = "transparent")+
+  scico::scale_fill_scico(name = "Cumulative Infections (log10 scale) \n (March 2020 - December 2021)",
+                       palette = "lapaz",
+                       direction = 1,
+                       na.value = "grey70",
+                       breaks = seq(0,7,1),
+                       labels = scales::label_math(),
+                       limits = c(0,7)
+  )+
+  theme_minimal()+
+  theme(legend.position = "bottom",
+        legend.title.position = "top",
+        legend.title = element_text(hjust = 0.5),
+        legend.key.width = grid::unit(3, "cm"),
+        axis.text = element_text(size = 6))
 
 ## Neighbors
-hexes_nb <- spdep::poly2nb(hexes, queen = TRUE, row.names = hexes$hexid)
+hexes_nb <- spdep::poly2nb(hexgrid_pop, queen = TRUE, row.names = hexgrid_pop$hexid)
 # hexes_nb2 <- st_touches(st_geometry(hexes))
 
 nb2INLA("Data/data-products/hexes_adjmat.graph", nb = hexes_nb)
@@ -102,81 +69,51 @@ listW <- nb2listw(neighbours = hexes_nb, style = "W", zero.policy = T)
 # B <- as(listB, "CsparseMatrix")
 W <- as(listW, "CsparseMatrix")
 
-## Population hexes
-hex_population <- sf::st_read("Data/data-sources/hexgrid_meta30m_population.geojson") |> 
-  filter(as.integer(hexid) < 7662,
-         ## Taking out the isolated hex at Keywest
-         as.integer(hexid) != 6545,
-         as.integer(hexid) %in% as.integer(hexid_to_keep$hexid)) |> 
-  st_transform(crs = 26915) |>
-  rename(population = metapop_30m) |> 
-  mutate(logpopulation = log(population))
-
-## Certifying the correct number of unique hex; 7352
-length(unique(na.omit(hex_population$hexid)))
-
 ## Pre-Omicron
 ## Remember to rebuild the full dataset from the four parts in code 01-hexAllocation_Infections_Meta30m.R
-hexgrid_preomicron <- vroom::vroom("Data/data-products/hexid-observations_preomicron_meta30m.csv") |>
-  mutate(hexid = as.character(hexid),
-         date = as.Date(date)) |>
-  select(-geometry) |>
-  mutate(infectionsPC = (infections/population)*1e5) |>
-  filter(as.integer(hexid) < 7662,
-         ## Taking out the isolated hex at Keywest
-         as.integer(hexid) != 6545,
-         as.integer(hexid) %in% as.integer(hexid_to_keep$hexid)) 
+hexgrid_preomicron <- vroom::vroom("Data/data-products/hexid-observations_preomicron05-31-25NOGEOM.csv") |> 
+  mutate(hexid = as.character(hexid)) 
 
-# |> 
-#   left_join(hexes, by = "hexid") |>
-#   sf::st_as_sf() |> 
-#   st_transform(crs = 26915)
-
-## Certifying the correct number of unique hex; 7352(?)
-length(unique(na.omit(hexgrid_preomicron$hexid)))
-
-## Function to push all dates to the end of the epidemiological week
-# end.of.epiweek <- function(x, end = 6) {
-#   offset <- (end - 4) %% 7
-#   num.x <- as.numeric(x)
-#   return(x - (num.x %% 7) + offset + ifelse(num.x %% 7 > offset, 7, 0))
-# }
-# 
-# hexgrid_preomicron_week <- hexgrid_preomicron |> 
-#   st_drop_geometry() |> 
-#   mutate(weekdate = end.of.epiweek(date)) |> 
-#   group_by(weekdate, hexid) |> 
-#   summarise(infections = sum(infections, na.rm = T)) |> 
-#   left_join(hex_population |> 
-#               st_drop_geometry() |> 
-#               select(hexid, population) |> 
-#               mutate(hexid = as.character(hexid))) |> 
-#   mutate(infectionsPC = (infections/population)*1e5)
-# 
-# vroom::vroom_write(x = hexgrid_preomicron_week,
-#                    file = "data-products/geo-hexes/hexgrid_meta30m_week.csv")
+# ### Cumulative plot test
+ggplot() +
+  geom_sf(dplyr::full_join(hexgrid_preomicron |> 
+                             filter(date == "2021-09-08"), 
+                           metapop  |>  
+                             mutate(hexid = as.character(hexid)) |> 
+                             dplyr::select(!metapop_30m), 
+                           by=c("hexid")) %>% 
+            sf::st_as_sf() |> 
+            st_transform(crs = 'ESRI:102009'),
+          mapping=aes(fill = log10(infections+1))) +
+  geom_sf(us_states,
+          mapping=aes(),
+          color = "black",
+          fill = "transparent")+
+  scico::scale_fill_scico(name = "Cumulative Infections (log10 scale) \n (March 2020 - December 2021)",
+                          palette = "lapaz",
+                          direction = 1,
+                          na.value = "grey70",
+                          # breaks = seq(0,7,1),
+                          # labels = scales::label_math(),
+                          # limits = c(0,7)
+  )+
+  theme_minimal()+
+  theme(legend.position = "bottom",
+        legend.title.position = "top",
+        legend.title = element_text(hjust = 0.5),
+        legend.key.width = grid::unit(3, "cm"),
+        axis.text = element_text(size = 6))
 
 ## Pre-Omicron expanded dataset
-hex_spacetime <- expand.grid(hexid = as.character(unique(hexes$hexid)),
+hex_spacetime <- expand.grid(hexid = as.character(unique(hexgrid_pop$hexid)),
                              date = seq.Date(from = min(hexgrid_preomicron$date),
                                              to = max(hexgrid_preomicron$date), 
                                              by = "day")) |> 
-  # left_join(hex_population |>
-  #             mutate(hexid = as.character(hexid)) |>
-  #             st_drop_geometry()) |>
   left_join(hexgrid_preomicron |> 
               st_drop_geometry() |> 
-              # rename(date = weekdate) |> 
-              select(hexid, date, infections, population)) |>  ## just join the desired columns, we have the geometry
-  # st_as_sf()|> 
+              select(hexid, date, infections, population, infectionsPC)) |>  ## just join the desired columns, we have the geometry
   mutate(Time = as.numeric(date - min(date)) + 1,
          ID = as.numeric(hexid),
-         infections = case_when(infections >= population ~ population,
-                                infections < population ~ infections,
-                                infections > 1 ~ infections,
-                                infections <= 1 ~ NA),
-         # infections = as.integer(replace_na(infections, replace = 0)),
-         infectionsPC = (infections/population)*1e5,
          logpopulation = log10(population+1))
 
 ## Certifying the correct number of unique hex; 7352(?)
@@ -226,8 +163,8 @@ library(dplyr)
 library(tibble)
 
 # # Set up parallel backend
-# cl <- makeCluster(detectCores() - 2)
-# registerDoParallel(cl)
+cl <- makeCluster(detectCores() - 2)
+registerDoParallel(cl)
 
 hyper_smooth <- list(
   prec = list(
@@ -242,28 +179,24 @@ hyper_smooth_bym2 <- list(
   prec = list(prior = "pc.prec", param = c(0.2, 0.01))
 )
 
-diag.eps = 1e-3
+# diag.eps = 1e-3
 
 # # Preprocess adjacency matrix on all workers
-# clusterEvalQ(cl, {
-#   library(INLA)
-#   library(dplyr)
-#   library(tibble)
-#   library(base)
-#   library(stats)
-#   hex_graph <- inla.read.graph("data-products/hexes_adjmat.graph")
-# })
+clusterEvalQ(cl, {
+  library(INLA)
+  library(dplyr)
+  library(tibble)
+  library(base)
+  library(stats)
+  hex_graph <- inla.read.graph("Data/data-products/hexes_adjmat.graph")
+})
 # 
 # # Export required objects
-# clusterExport(cl, c("hex_spacetime", "hyper_smooth", "hyper_smooth_bym2", "compute_list", "predictor_list"))
+clusterExport(cl, c("hex_spacetime", "hyper_smooth", "hyper_smooth_bym2", "compute_list", "predictor_list"))
 
 weeks <- sort(unique(na.omit(hex_spacetime$date)))
 
 hex_graph <- INLA::inla.read.graph("Data/data-products/hexes_adjmat.graph")
-
-# CAR_list <- foreach(i = 1:length(weeks),
-#                     .combine = c,
-#                     .multicombine = TRUE) %dopar% {
 
 CAR_df <- vroom::vroom("Data/data-products/tsa_meta30m_run_preomicron_daily.csv")
 
@@ -355,56 +288,51 @@ test_dates <- c(c(alpha_peak-63,
 
 ## This fitting takes very long, it is process of prune fitting. Where it starts fitting something and narrows down to a best fit, which parameteres are defined at the while loop
 
-for (i in 1:length(test_dates)) {
+CAR_list <- foreach(i = 1:length(weeks),
+                    .combine = c,
+                    .multicombine = TRUE) %dopar% {
+
 # for (i in 1:length(weeks)) {
   
   ## To clean unused variables here
   # gc()
   
-  if(is.na(dates_to_rerun[i]))next
+  # if(is.na(dates_to_rerun[i]))next
   
-  # current_date <- weeks[i]
-  current_date <- test_dates[i]
+  current_date <- weeks[i]
   hex_week <- hex_spacetime %>% 
     filter(date == current_date)
   
   best_model <- NULL
-  counter <- 0
-  sd_values <- c(0.0001, 0.03)  # Start with high value
-  
-  ## Parameters for the Hessian negative testing, to avoid INLA solver get stuck at negative eigenvalues
-  # hess.min <- -1
-  # h.value <- 0.01
-  # h.trials <- 0.001
-  # trials <- 0
-  # while (hess.min <= 0 & trials < 50){
+  # counter <- 0
+  # sd_values <- c(0.0001, 0.03)  # Start with high value
     
-  while ((sd(sd_values)<0.0025 || sd(sd_values) > 0.010) & counter <= 50) {  # Flipped condition
+  # while ((sd(sd_values)<0.0025 || sd(sd_values) > 0.010) & counter <= 50) {  # Flipped condition
     tryCatch({
       set.seed(.Random.seed)
       
       best_model <- inla(
         as.formula(infectionsPC ~ 1 + 
                      f(ID, 
-                       model = "besag2",
+                       model = "besag",
                        graph = "Data/data-products/hexes_adjmat.graph",
                        scale.model = TRUE,
-                       diagonal = diag.eps,
+                       # diagonal = diag.eps,
                        constr = TRUE,
                        hyper = hyper_smooth)),
         data = as.data.frame(hex_week),
         family = "gaussian",
-        control.inla = control.inla(strategy = "laplace"),
+        control.inla = control.inla(strategy = "adaptive"),
         # control.inla = control.inla(strategy = "gaussian", h = h.value, int.strategy = "eb"),
-        control.mode = control.mode(restart = TRUE),
+        # control.mode = control.mode(restart = TRUE),
         control.compute = compute_list,
         control.predictor = predictor_list,
-        control.fixed = list(prec.intercept = 0.1),
+        # control.fixed = list(prec.intercept = 0.1),
         num.threads = 6,  # Prevent internal threading conflicts
-        # verbose = T
+        verbose = T
       )
       
-      sd_values <- best_model$summary.fitted.values$sd
+      # sd_values <- best_model$summary.fitted.values$sd
       
     }, error = function(e) {
       set.seed(.Random.seed)
@@ -412,7 +340,7 @@ for (i in 1:length(test_dates)) {
       best_model <- inla(
         as.formula(infectionsPC ~ 1 + 
                      f(ID, 
-                       model = "besag2",
+                       model = "besag",
                        graph = hex_graph,
                        # diagonal = diag.eps,
                        scale.model = TRUE,
@@ -422,31 +350,32 @@ for (i in 1:length(test_dates)) {
         family = "gaussian",
         control.inla = control.inla(strategy = "gaussian", int.strategy = "eb"),
         # control.inla = control.inla(strategy = "gaussian", h = h.value, int.strategy = "eb"),
-        control.mode = control.mode(restart = TRUE),
+        # control.mode = control.mode(restart = TRUE),
         control.compute = compute_list,
         control.predictor = predictor_list,
-        control.fixed = list(prec.intercept = 0.1),
+        # control.fixed = list(prec.intercept = 0.1),
         num.threads = 6,  # Prevent internal threading conflicts
-        # verbose = T
+        verbose = T
       )
-      sd_values <- best_model$summary.fitted.values$sd
+      # sd_values <- best_model$summary.fitted.values$sd
     })
     
-    counter <- counter + 1
+    # counter <- counter + 1
     # hess.start <- which(best_model$logfile == 'Eigenvalues of the Hessian')
     # hess.min <- min(as.numeric(best_model$logfile[(hess.start+1):(hess.start+3)]))
     # h.value <- h.trials + 0.001
     # h.trials <- h.value
     # trials <- trials + 1
-  }
+  # }
   
   cat("Finished CAR model for week ", as.character(current_date),"! \n")
   
-  CAR_list[[i]] <-
-    # list(
+  # CAR_list[[i]] <-
+    list(
     cbind(hex_week, 
           best_model$summary.fitted.values |> 
             rownames_to_column(var = "INLApred"))
+    )
   
   # gc()
   rm(best_model, hex_week)
@@ -573,21 +502,28 @@ ggplot() +
        # caption = "*Proportional weights means weights ranging from 1 to 0")
 
 CAR_df <- bind_rows(CAR_list) |> 
-  left_join(hexes) |> 
+  left_join(metapop |> 
+              mutate(hexid = as.character(hexid))) |> 
   st_as_sf() |> 
   st_transform(crs = 26915)
+
+# test <- cbind(metapop  |>  
+#                 mutate(hexid = as.character(hexid)) |> 
+#                 dplyr::select(!metapop_30m),
+#               mean = best_model$summary.fitted.values$mean) |> 
+#   sf::st_as_sf()
 
 ggplot() +
   geom_sf(data = CAR_df,
           aes(fill = mean))+
-  scale_fill_viridis_c(option = color_option, direction = -1)+
+  scale_fill_viridis_c()+
   # scale_fill_viridis_b(option = color_option,
   #                      name = "Estimated Infections/100k/day",
   #                      direction = -1,
-  #                      breaks = breaks_plt1,
-  #                      labels = labels_plt1,
+  #                      breaks = scales::breaks_pretty(n = 10),
+  #                      # labels = labels_plt1,
   #                      na.value = "steelblue4",
-  #                      limits = limits_plt1
+  #                      # limits = limits_plt1
   # )+
   theme_minimal()+
   theme(legend.position = "bottom",

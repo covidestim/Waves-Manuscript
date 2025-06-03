@@ -97,10 +97,10 @@ InfPopAll <- data.frame(hexid = 0,
                         geometry = hexgrid_pop$geometry[1],
                         date = NA)
 
-# testDate <- "2020-07-26"
+testDate <- "2020-07-26"
 
 ### Write a loop for the allocation
-filtDate <- unique(na.omit(observationsFips$date))
+# filtDate <- unique(na.omit(observationsFips$date))
 
 gc()
 
@@ -170,19 +170,37 @@ for (i in filtDate){
     dplyr::left_join(interpolated, by = to_id)# %>%
   # rename(geometry = x)
   
-  # ggplot() + geom_sf(output_shapes,
-  #                    mapping = aes(fill = log10(infctns+1)))+
+  # ggplot() + geom_sf(observationsFilt,
+  #                    mapping = aes(fill = infctns))+
   #   theme_minimal() +
   #   scale_fill_gradient(low = "thistle1", high = "deeppink4", na.value = "green")  +
-  #   geom_sf(output_shapes %>% filter(infctns == 0),
+  #   geom_sf(observationsFilt %>% filter(infctns == 0),
   #           mapping = aes(), fill="green")+
-  #   labs(title = "With CBGs")
+  #   labs(title = "With Meta30m")
   
   ##### Date
   output_shapes$date <- as.Date(i, origin='1970-01-01')
   
   ##### Add to the big dataframe
   InfPopAll <- rbind(InfPopAll, output_shapes)
+  
+  ### Check if we have the same number of infections, our threshold here is if the loss is bigger than 10%
+  if(sum(observationsFilt %>% 
+         st_drop_geometry() %>% 
+         filter(!is.na(infctns)) %>%
+         select(infctns)) - 
+     sum(output_shapes %>% 
+         mutate(infctns = case_when(population == 0 ~ 0,
+                                    infctns >= population ~ population,
+                                    TRUE ~ infctns)) |> 
+         st_drop_geometry() %>% 
+         filter(!is.na(infctns)) %>% 
+         select(infctns)) > 0.10*sum(observationsFilt %>% 
+                                     st_drop_geometry() %>% 
+                                     filter(!is.na(infctns)) %>%
+                                     select(infctns))) {
+    print(paste("signicant loss of infections in interpolation step at date: ", i))
+  }
 }
 
 ###############################################################################
@@ -198,10 +216,66 @@ hexObservationsAll <- InfPopAll2  |>
   ## This certifies we haven't allocated more infections than the population itself, 
   ## as is done for each date it still allows for more than one infection cumulatively
   mutate(infectionsPC = case_when(population == 0 ~ 0,
-                                  infections >= population ~ population),
+                                  infections >= population ~ population,
+                                  TRUE ~ infctns), ## This is an easy fix
          infectionsPC = (infections/population),
          date = as.Date(date)
          )
+
+# ## Check plots
+# outfromtheloop <- output_shapes |> 
+#   mutate(type = "Out From the Loop")
+# withwrongmutate <- output_shapes |> 
+#   mutate(infctns = case_when(population == 0 ~ 0,
+#                              infctns >= population ~ population)) |> 
+#   mutate(type = "With wrong mutate")
+# withrightmutate <- output_shapes |> 
+#   mutate(infctns = case_when(population == 0 ~ 0,
+#                              infctns >= population ~ population,
+#                              TRUE ~ infctns))|> 
+#   mutate(type = "With correct mutate")
+# 
+# ## Bias for the infections allocation
+# diffBias <- output_shapes |> select(hexid, geometry) |> 
+#   mutate(outfromloopInfctns = output_shapes$infctns,
+#          withcorrectInfctns = withrightmutate$infctns) |> 
+#   mutate(bias = outfromloopInfctns - withcorrectInfctns)
+# 
+# ## Plots
+# p1 <- ggplot() + geom_sf(outfromtheloop,
+#                    mapping = aes(fill = infctns))+
+#   theme_minimal() +
+#   scale_fill_gradient(low = "thistle1", high = "deeppink4", na.value = "green")  +
+#   geom_sf(output_shapes %>% filter(infctns == 0),
+#           mapping = aes(), fill="green")+
+#   labs(title = "Out from the Loop")
+# 
+# p2 <- ggplot() + geom_sf(withwrongmutate,
+#                    mapping = aes(fill = infctns))+
+#   theme_minimal() +
+#   scale_fill_gradient(low = "thistle1", high = "deeppink4", na.value = "green")  +
+#   geom_sf(output_shapes %>% filter(infctns == 0),
+#           mapping = aes(), fill="green")+
+#   labs(title = "With Wrong Mutate")
+# 
+# p3 <- ggplot() + geom_sf(withrightmutate,
+#                    mapping = aes(fill = infctns))+
+#   theme_minimal() +
+#   scale_fill_gradient(low = "thistle1", high = "deeppink4", na.value = "green")  +
+#   geom_sf(output_shapes %>% filter(infctns == 0),
+#           mapping = aes(), fill="green")+
+#   labs(title = "With Correct Mutate")
+# 
+# p4 <- ggplot() + geom_sf(diffBias,
+#                          mapping = aes(fill = bias))+
+#   theme_minimal() +
+#   scale_fill_gradient(low = "thistle1", high = "deeppink4", na.value = "green")  +
+#   geom_sf(diffBias %>% filter(bias == 0),
+#           mapping = aes(), fill="green")+
+#   labs(title = "With Correct Mutate")
+# 
+# library(patchwork)
+# (p1 / p3)
 
 ### Create an SF version for plots 
 hexObservationsAllSF <- st_as_sf(hexObservationsAll)
@@ -210,13 +284,14 @@ hexObservationsAllSF <- st_as_sf(hexObservationsAll)
 
 ### Check if we have the same number of infections, our threshold here is if the loss is bigger than 10%
 if(sum(observationsFips %>% 
+       filter(date == testDate) |> 
        st_drop_geometry() %>% 
        filter(!is.na(infctns)) %>%
        select(infctns)) - 
-   sum(hexObservationsAll %>% 
+   sum(output_shapes %>% 
        st_drop_geometry() %>% 
-       filter(!is.na(infections)) %>% 
-       select(infections)) > 0.10*sum(observationsFips %>% 
+       filter(!is.na(infctns)) %>% 
+       select(infctns)) > 0.10*sum(observationsFips %>% 
                                       st_drop_geometry() %>% 
                                       filter(!is.na(infctns)) %>%
                                       select(infctns))) {
