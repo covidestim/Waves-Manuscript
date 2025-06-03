@@ -3,6 +3,10 @@
 *.DS_store
 Data/data-products/CAR_list_meta30m.RDS
 Data/data-products/hexid-observations_preomicron_meta30m.csv
+Data/data-products/hexid-observations_preomicron_meta30m.geojson
+Data/data-products/hexid-observations_preomicron05-31-25.geojson
+Data/data-products/hexid-observations_preomicron05-31-25.geojson.zip
+Data/data-products/hexid-observations_preomicron05-31-25NOGEOM.csv
 Data/data-products/tsa_meta30m_run_preomicron_daily.csv
 Data/data-products/tsa_meta30m_run_preomicron_daily.csv.zip
 Data/data-products/tsa_preomicron.csv
