@@ -228,6 +228,42 @@ hexgrid_preomicron_cum <- vroom::vroom("Data/data-products/hexid-observations_pr
                 cum_incidence = exp(log10(cum_infections) - logpopulation),
                 log_incidence = log10(cum_incidence+1))
 
+# ### Cumulative plot test
+ggplot() +
+  geom_sf(hexgrid_preomicron_cum |>
+            filter(population > 0)|> ## uncomment if you wanna check the flatten figures
+            st_transform(crs = 'ESRI:102009'),
+          mapping=aes(fill = population)) +
+  geom_sf(hexgrid_preomicron_cum |>
+            filter(population == 0)|> ## uncomment if you wanna check the flatten figures
+            st_transform(crs = 'ESRI:102009'),
+          mapping = aes(),
+          fill = "green") +
+  geom_sf(hexgrid_preomicron_cum |>
+            filter(is.na(population))|> ## uncomment if you wanna check the flatten figures
+            st_transform(crs = 'ESRI:102009'),
+          mapping = aes(),
+          fill = "darkgreen") +
+  geom_sf(us_states,
+          mapping=aes(),
+          color = "black",
+          fill = "transparent")+
+  # scico::scale_fill_scico(name = "Cumulative Infections (log10 scale) \n (March 2020 - December 2021)",
+  #                      palette = "managua",
+  #                      direction = -1,
+  #                      na.value = "grey70",
+  #                      # breaks = seq(0,3,1),
+  #                      # labels = scales::label_math(),
+  #                      # limits = c(1,3)
+  # )+
+  scale_fill_gradient(low = "thistle1", high = "deeppink4")+
+  theme_minimal()+
+  theme(legend.position = "bottom",
+        legend.title.position = "top",
+        legend.title = element_text(hjust = 0.5),
+        legend.key.width = grid::unit(3, "cm"),
+        axis.text = element_text(size = 6))
+
 ## Filter for only the hexes we are keep to the analysis
 hexid_to_keep <- hexgrid_preomicron_cum |> 
   filter(population > 0) |> 

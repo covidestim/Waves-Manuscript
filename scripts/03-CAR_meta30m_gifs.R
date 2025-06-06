@@ -7,9 +7,9 @@ CAR_df2 <- vroom::vroom("Data/data-products/tsa_meta30m_run_preomicron_daily.csv
                 incidence_fitted = exp(log10(cases_fitted+1) - logpopulation)*1e5,
                 log_incidence = log10(incidence_fitted+1))
 
-hexes_to_keep <- st_read("Data/data-sources/hexid_to_keep.geojson")
+# hexes_to_keep <- st_read("Data/data-sources/hexid_to_keep.geojson")
 
-load("Data/data-products/CAR_list_meta30m.RDS")
+# load("Data/data-products/CAR_list_meta30m.RDS")
 
 ## Saving as list object
 # save(list = CAR_list, 
@@ -17,13 +17,13 @@ load("Data/data-products/CAR_list_meta30m.RDS")
 #      compress = "xz", 
 #      compression_level = 9)
 
-hexes <- sf::st_read("Data/data-sources/hexes.geojson") |> 
-  filter(as.integer(hexid) < 7662,
-         ## Taking out the isolated hex at Keywest
-         as.integer(hexid) != 6545,
-         hexid %in% as.character(hexes_to_keep$hexid)) |> 
-  st_transform(crs = 4326) |> 
-  mutate(hexid = as.character(1:n()))
+# hexes <- sf::st_read("Data/data-sources/hexes.geojson") |> 
+#   filter(as.integer(hexid) < 7662,
+#          ## Taking out the isolated hex at Keywest
+#          as.integer(hexid) != 6545,
+#          hexid %in% as.character(hexes_to_keep$hexid)) |> 
+#   st_transform(crs = 4326) |> 
+#   mutate(hexid = as.character(1:n()))
 
 ## Breakdowns of each peaks
 breaks_plt <- c(0,seq(150,350, 20))
@@ -68,41 +68,30 @@ color_option <- "magma"
 
 ## Peaks dates
 alpha_peak <- as.Date("2020-11-19")
-delta_peak <- as.Date("2021-09-08")
+delta_peak <- as.Date("2021-09-04")
 
 # alpha_peak_week <- as.Date("2020-11-28")
 # delta_peak_week <- as.Date("2021-09-04")
 
-hex_test <- CAR_df2 |> 
-  filter(date == delta_peak)
+hex_test <- CAR_df |> 
+  filter(date == alpha_peak)
 
 plt_peak_delta <- ggplot()+
-  geom_sf(data = hex_test |>
-            mutate(hexid = as.character(hexid)) |>
-            left_join(hexes) |> 
-            st_as_sf() |> 
-            st_transform(crs=26915),
+  geom_sf(data = hex_test,
           mapping = aes(fill = mean))+
-  scale_fill_viridis_b(option = "magma",
-                       name = "Estimated Infections/100k/week",
-                       direction = -1,
-                       # breaks = seq(0,5, 0.5),
-                       # n.breaks = 20,
-                       breaks = breaks_plt,
-                       labels = labels_plt,
-                       limits = limits_plt,
-                       na.value = "transparent"
-  )+
-  # scale_color_viridis_b(option = "magma",
+  # scale_fill_viridis_b(option = "magma",
   #                      name = "Estimated Infections/100k/week",
   #                      direction = -1,
   #                      # breaks = seq(0,5, 0.5),
   #                      # n.breaks = 20,
-  #                      breaks = breaks_plt3,
-  #                      labels = labels_plt3,
-  #                      limits = limits_plt3,
+  #                      # breaks = breaks_plt,
+  #                      # labels = labels_plt,
+  #                      # limits = limits_plt,
   #                      na.value = "transparent"
   # )+
+  scale_fill_viridis_c(option = "magma",
+                       name = "Estimated Infections/100k/week",
+                       direction = -1)+
   theme_minimal(base_size = 12)+
   theme(legend.title.position = "top",
         plot.background = element_rect(fill = "white", colour = NA),
@@ -115,34 +104,38 @@ plt_peak_delta <- ggplot()+
 plt_peak_delta
 
 ## function to plot hexes with infections
-plt_fun <- \(week, is.omicron = FALSE, infections, hexes, plot_img = TRUE) {
+plt_fun <- \(week, 
+             # is.omicron = FALSE, 
+             infections, 
+             # hexes, 
+             plot_img = TRUE) {
   
-  hexes <- hexes |> 
-    mutate(hexid = as.character(hexid))
+  # hexes <- hexes |> 
+  #   mutate(hexid = as.character(hexid))
   
-  infections <- infections |> 
-    mutate(hexid = as.character(hexid))
+  # infections <- infections |> 
+  #   mutate(hexid = as.character(hexid))
   
   # Filter the data for the current week
   infections <- infections |> 
     filter(date == week)
   
   plot_alphas <- ggplot()+
-    geom_sf(data = infections|> 
-              left_join(hexes) |> 
-              st_as_sf() |> 
-              st_transform(crs=26915),
+    geom_sf(data = infections,
             mapping = aes(fill = mean))+
-    scale_fill_viridis_b(option = "magma",
+    # scale_fill_viridis_b(option = "magma",
+    #                      name = "Estimated Infections/100k/week",
+    #                      direction = -1,
+    #                      # breaks = seq(0,5, 0.5),
+    #                      # n.breaks = 20,
+    #                      breaks = breaks_plt,
+    #                      labels = labels_plt,
+    #                      limits = limits_plt,
+    #                      na.value = "transparent"
+    # )+
+    scale_fill_viridis_c(option = "magma",
                          name = "Estimated Infections/100k/week",
-                         direction = -1,
-                         # breaks = seq(0,5, 0.5),
-                         # n.breaks = 20,
-                         breaks = breaks_plt,
-                         labels = labels_plt,
-                         limits = limits_plt,
-                         na.value = "transparent"
-    )+
+                         direction = -1)+
     theme_minimal(base_size = 12)+
     theme(legend.title.position = "top",
           plot.background = element_rect(fill = "white", colour = NA),
@@ -171,18 +164,19 @@ plt_fun <- \(week, is.omicron = FALSE, infections, hexes, plot_img = TRUE) {
   return(paste0("img/movies/frame_for_week_", week, ".png"))
 }
 
-weeks <- sort(unique(na.omit(CAR_df2$date)))
+weeks <- sort(unique(na.omit(CAR_df$date)))
+weeks <- seq.Date(from = (alpha_peak-63), to = alpha_peak, by = "day")
 
-hexes <- hexes |>
-  filter(as.integer(hexid)<7662) |> 
-  st_transform(crs = 26915) |> 
-  sf::st_as_sf()
+# hexes <- hexes |>
+#   filter(as.integer(hexid)<7662) |> 
+#   st_transform(crs = 26915) |> 
+#   sf::st_as_sf()
 
-frame_files <- lapply(na.omit(weeks[seq(1,length(weeks), 7)]), 
+frame_files <- lapply(weeks, 
                       plt_fun, 
-                      TRUE,
-                      CAR_df2, 
-                      hexes,
+                      # TRUE,
+                      CAR_df, 
+                      # hexes,
                       TRUE)
 
 frame_files <- frame_files |> 
@@ -196,7 +190,7 @@ animation2 <- frame_files%>%
 animation2
 
 # Specify the output file path
-output_file <- "img/besag2_meta30m_daily.gif"
+output_file <- "img/delta_meta30m_daily.gif"
 
 # Save the GIF animation
 magick::image_write(animation2, output_file, quality = 90, comment = "waves movie")
