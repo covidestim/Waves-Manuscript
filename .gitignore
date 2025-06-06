@@ -7,8 +7,10 @@ Data/data-products/hexid-observations_preomicron_meta30m.geojson
 Data/data-products/hexid-observations_preomicron05-31-25.geojson
 Data/data-products/hexid-observations_preomicron05-31-25.geojson.zip
 Data/data-products/hexid-observations_preomicron05-31-25NOGEOM.csv
+Data/data-products/hexid-observations_preomicron06-05-25.geojson
 Data/data-products/tsa_meta30m_run_preomicron_daily.csv
 Data/data-products/tsa_meta30m_run_preomicron_daily.csv.zip
+Data/data-products/tsa_meta30m_run_preomicron_daily.geojson
 Data/data-products/tsa_preomicron.csv
 Data/data-products/tsa_preomicron.csv.zip
 Data/data-sources/covidestim-observations.csv
