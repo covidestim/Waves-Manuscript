@@ -2,6 +2,7 @@
 .Rproj.user
 *.DS_store
 Data/data-products/CAR_list_meta30m.RDS
+Data/data-products/hex_spacetime.csv
 Data/data-products/hexid-observations_preomicron_meta30m.csv
 Data/data-products/hexid-observations_preomicron_meta30m.geojson
 Data/data-products/hexid-observations_preomicron05-31-25.geojson
