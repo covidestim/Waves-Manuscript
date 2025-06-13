@@ -149,23 +149,20 @@ weeks <- sort(unique(na.omit(CAR_df2$date)))
 ## Alpha wave movie
 weeks_alpha <- seq.Date(from = (alpha_peak-63), to = alpha_peak, by = "day")
 
-## Delta wave movie
-weeks_delta <- seq.Date(from = (delta_peak-63), to = delta_peak, by = "day")
-
 frame_files <- lapply(weeks_alpha, 
-                      plt_fun, 
-                      # TRUE,
-                      CAR_df2, 
-                      hexgrid,
-                      TRUE)
+  plt_fun, 
+  # TRUE,
+  CAR_df2, 
+  hexgrid,
+  TRUE)
 
 frame_files <- frame_files |> 
-  unlist()
+unlist()
 
 animation2 <- frame_files%>% 
-  magick::image_read() %>% 
-  magick::image_animate(fps = 4, 
-                        optimize = T)
+magick::image_read() %>% 
+magick::image_animate(fps = 4, 
+    optimize = T)
 
 animation2
 
@@ -175,128 +172,154 @@ output_file <- "img/alpha_meta30m_daily.gif"
 # Save the GIF animation
 magick::image_write(animation2, output_file, quality = 90, comment = "alpha wave movie")
 
-## Alpha Peak Movie
-j <- which(weeks == alpha_peak)
+## Delta wave movie
+weeks_delta <- seq.Date(from = (delta_peak-63), to = delta_peak, by = "day")
 
-frame_files <- lapply(na.omit(weeks[seq(j-90,j+60, 2)]), 
+frame_files <- lapply(weeks_delta, 
                       plt_fun, 
-                      TRUE,
+                      # TRUE,
                       CAR_df2, 
-                      hexes,
-                      TRUE)
-
-frame_files <- frame_files |> 
-  unlist() 
-
-animation3 <- frame_files%>% 
-  magick::image_read() %>% 
-  magick::image_animate(fps = 4, 
-                        optimize = T)
-animation3
-
-# Specify the output file path
-output_file <- "img/besag2_meta30m_alpha_daily.gif"
-
-# Save the GIF animation
-magick::image_write(animation3, 
-                    output_file, 
-                    quality = 90, 
-                    comment = "Alpha Wave movie")
-
-## Delta Peak Movie
-j <- which(weeks == delta_peak)
-
-frame_files <- lapply(na.omit(weeks[seq(j-60,j+60, 1)]), 
-                      plt_fun, 
-                      TRUE,
-                      CAR_df2, 
-                      hexes,
+                      hexgrid,
                       TRUE)
 
 frame_files <- frame_files |> 
   unlist()
 
-animation4 <- magick::image_animate(magick::image_read(frame_files), 
-                                    fps = 4, 
-                                    optimize = T)
-animation4
+animation3 <- frame_files%>% 
+  magick::image_read() %>% 
+  magick::image_animate(fps = 4, 
+                        optimize = T)
+
+animation3
 
 # Specify the output file path
-output_file <- "img/besag2_meta30m_delta_daily.gif"
+output_file <- "img/delta_meta30m_daily.gif"
 
 # Save the GIF animation
-magick::image_write(animation4, 
-                    output_file, 
-                    quality = 90, 
-                    comment = "Delta Wave movie")
+magick::image_write(animation3, output_file, quality = 90, comment = "delta wave movie")
+
+# ## Alpha Peak Movie
+# j <- which(weeks == alpha_peak)
+
+# frame_files <- lapply(na.omit(weeks[seq(j-90,j+60, 2)]), 
+#                       plt_fun, 
+#                       TRUE,
+#                       CAR_df2, 
+#                       hexes,
+#                       TRUE)
+
+# frame_files <- frame_files |> 
+#   unlist() 
+
+# animation3 <- frame_files%>% 
+#   magick::image_read() %>% 
+#   magick::image_animate(fps = 4, 
+#                         optimize = T)
+# animation3
+
+# # Specify the output file path
+# output_file <- "img/besag2_meta30m_alpha_daily.gif"
+
+# # Save the GIF animation
+# magick::image_write(animation3, 
+#                     output_file, 
+#                     quality = 90, 
+#                     comment = "Alpha Wave movie")
+
+# ## Delta Peak Movie
+# j <- which(weeks == delta_peak)
+
+# frame_files <- lapply(na.omit(weeks[seq(j-60,j+60, 1)]), 
+#                       plt_fun, 
+#                       TRUE,
+#                       CAR_df2, 
+#                       hexes,
+#                       TRUE)
+
+# frame_files <- frame_files |> 
+#   unlist()
+
+# animation4 <- magick::image_animate(magick::image_read(frame_files), 
+#                                     fps = 4, 
+#                                     optimize = T)
+# animation4
+
+# # Specify the output file path
+# output_file <- "img/besag2_meta30m_delta_daily.gif"
+
+# # Save the GIF animation
+# magick::image_write(animation4, 
+#                     output_file, 
+#                     quality = 90, 
+#                     comment = "Delta Wave movie")
 
 
-for (i in weeks) {
-  hex_test <- CAR_df2 |> 
-    filter(date == i)
+# for (i in weeks) {
+#   hex_test <- CAR_df2 |> 
+#     filter(date == i)
   
-  plt <- ggplot()+
-    geom_sf(data = hex_test |>
-              mutate(hexid = as.character(hexid)) |> 
-              left_join(hexes) |> 
-              st_as_sf() |> 
-              st_transform(crs=26915),
-            mapping = aes(fill = mean))+
-    scale_fill_viridis_b(option = "magma",
-                         name = "Estimated Infections/day",
-                         direction = -1,
-                         breaks = breaks_plt,
-                         labels = labels_plt,
-                         na.value = "steelblue4",
-                         limits = limits_plt
-    )+
-    theme_minimal()+
-    theme(legend.title.position = "top",
-          legend.location = "plot",
-          legend.position = "bottom", 
-          legend.key.width = grid::unit(3, "cm"))+
-    labs(title = as.Date(i))+
-    coord_sf()
-  print(plt)
-}
+#   plt <- ggplot()+
+#     geom_sf(data = hex_test |>
+#               mutate(hexid = as.character(hexid)) |> 
+#               left_join(hexes) |> 
+#               st_as_sf() |> 
+#               st_transform(crs=26915),
+#             mapping = aes(fill = mean))+
+#     scale_fill_viridis_b(option = "magma",
+#                          name = "Estimated Infections/day",
+#                          direction = -1,
+#                          breaks = breaks_plt,
+#                          labels = labels_plt,
+#                          na.value = "steelblue4",
+#                          limits = limits_plt
+#     )+
+#     theme_minimal()+
+#     theme(legend.title.position = "top",
+#           legend.location = "plot",
+#           legend.position = "bottom", 
+#           legend.key.width = grid::unit(3, "cm"))+
+#     labs(title = as.Date(i))+
+#     coord_sf()
+#   print(plt)
+# }
 
-## Population hexes
-hex_pop <- sf::st_read("Data/data-sources/hexgrid_meta30m_population.geojson") |> 
-  filter(as.integer(hexid) < 7662,
-         ## Taking out the isolated hex at Keywest
-         as.integer(hexid) != 6545) |> ## Filtering out Puerto Rico hexes
-  st_transform(crs = 26915) |>
-  rename(population = metapop_30m) |> 
-  mutate(logpopulation = log(population))
+# ## Population hexes
+# hex_pop <- sf::st_read("Data/data-sources/hexgrid_meta30m_population.geojson") |> 
+#   filter(as.integer(hexid) < 7662,
+#          ## Taking out the isolated hex at Keywest
+#          as.integer(hexid) != 6545) |> ## Filtering out Puerto Rico hexes
+#   st_transform(crs = 26915) |>
+#   rename(population = metapop_30m) |> 
+#   mutate(logpopulation = log(population))
 
-ggplot() +
-  geom_sf(data = hexes|>
-            dplyr::mutate(population = hex_pop$population,
-                          logpopulation = hex_pop$logpopulation) |>
-            dplyr::mutate(cases_fitted = CAR_list[[j-120]]$mean,
-                          incidence_fitted = exp(log(cases_fitted) - logpopulation)*1e5,
-                          log_incidence = log10(incidence_fitted)) |>
-            # filter(infections > 1) |>
-            st_transform(crs = 26915),
-          aes(fill = cases_fitted))+
-  scale_fill_viridis_b(option = color_option,
-                       name = "Estimated Infections",
-                       direction = -1,
-                       breaks = breaks_plt1,
-                       labels = labels_plt1,
-                       limits = limits_plt1
-  )+
-  theme_minimal()+
-  theme(legend.position = "bottom",
-        legend.title.position = "top",
-        legend.key.width = grid::unit(1, "cm"))+
-  guides(fill = guide_bins(title = "Infections per capita/100k",
-                           title.position = "top",
-                           title.vjust = 0.5))
+# ggplot() +
+#   geom_sf(data = hexes|>
+#             dplyr::mutate(population = hex_pop$population,
+#                           logpopulation = hex_pop$logpopulation) |>
+#             dplyr::mutate(cases_fitted = CAR_list[[j-120]]$mean,
+#                           incidence_fitted = exp(log(cases_fitted) - logpopulation)*1e5,
+#                           log_incidence = log10(incidence_fitted)) |>
+#             # filter(infections > 1) |>
+#             st_transform(crs = 26915),
+#           aes(fill = cases_fitted))+
+#   scale_fill_viridis_b(option = color_option,
+#                        name = "Estimated Infections",
+#                        direction = -1,
+#                        breaks = breaks_plt1,
+#                        labels = labels_plt1,
+#                        limits = limits_plt1
+#   )+
+#   theme_minimal()+
+#   theme(legend.position = "bottom",
+#         legend.title.position = "top",
+#         legend.key.width = grid::unit(1, "cm"))+
+#   guides(fill = guide_bins(title = "Infections per capita/100k",
+#                            title.position = "top",
+#                            title.vjust = 0.5))
 
-sd_list <- sapply(CAR_list, function(x){x <- sd(x$sd)})
-sd_list <- data.frame(cbind(week = as.Date(weeks), 
-                            sd = sd_list))
+# sd_list <- sapply(CAR_list, function(x){x <- sd(x$sd)})
+# sd_list <- data.frame(cbind(week = as.Date(weeks), 
+#                             sd = sd_list))
 
-ggplot(data = sd_list, aes(x = week, y = sd))+
-  geom_point()
+# ggplot(data = sd_list, aes(x = week, y = sd))+
+#   geom_point()
