@@ -1073,6 +1073,9 @@ CAR_df_preomicron <- vroom::vroom(paste0("Data/data-products/tsa_",
 alpha_peak <- as.Date("2020-11-19")
 delta_peak <- as.Date("2021-09-04")
 
+## Hexgrid
+hexes <- sf::st_read("Data/data-products/hexgrid.geojson")
+
 ## Pre-Omicron
 CAR_lag_alpha <- CAR_df_preomicron |> 
   mutate(hexid = as.character(hexid)) |> 
@@ -1205,7 +1208,7 @@ fig4c <- ggplot()+
   geom_vline(xintercept = 7, color = "grey80", lty = "dashed")+
   geom_vline(xintercept = seq(7,63,7), lty = "dotted", color = "grey50")+
   theme_minimal()+
-  labs(x = "Days before national curve peak \n [days]", 
+  labs(x = "Days before national curve peak", 
        y = "Speed of expansion")+
   scale_x_reverse(breaks = seq(7,63,7))+
   units::scale_y_units(labels = scales::label_comma(),
@@ -1252,11 +1255,11 @@ rename(distToFront = dstTFrn)
 
 
 plt1 <- ggplot() + 
-geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey90", color = NA) +
-geom_sf(data=distanceToFront.df_first, 
+      geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey90", color = NA) +
+      geom_sf(data=distanceToFront.df_first, 
   mapping=aes(geometry= geometry, 
     color=distToFront/1000), size=1.5) +
-    geom_sf(data=distanceToFront.df_first %>% 
+      geom_sf(data=distanceToFront.df_first %>% 
       filter(distToFront ==0), 
       mapping=aes(geometry= geometry), 
       color = "black", size=1.5) +
@@ -1277,7 +1280,7 @@ plt2 <- ggplot() +
       geom_sf(data=distanceToFront.df_second, 
         mapping=aes(geometry= geometry, 
           color=distToFront/1000), size=1.5) +
-          geom_sf(data=distanceToFront.df_second %>% 
+      geom_sf(data=distanceToFront.df_second %>% 
             filter(distToFront ==0), 
             mapping=aes(geometry= geometry), 
             color = "black", size=1.5) +
@@ -1285,7 +1288,7 @@ plt2 <- ggplot() +
             option = "C", 
             breaks = c(0,50,100,200, 500, 1000, 1500), 
             name = "Distance to nearest point\n on boundary at t+1\n(in kms)") +
-            theme_minimal()+
+            theme_void()+
             labs(title = "2nd Wave")
 plt2
             
@@ -1295,13 +1298,13 @@ heatmap_waves <- (plt1 | plt2)+
 heatmap_waves
             
 ggsave(plot = heatmap_waves,
-              filename = "Figures/heatmap_waves.png",
+              filename = "Figures/fig4.png",
               width = 16,
               height = 9,
               dpi = 300)
               
 ggsave(plot = heatmap_waves,
-                filename = "Figures/heatmap_waves.pdf",
+                filename = "Figures/fig4.pdf",
                 width = 16,
                 height = 9,
                 dpi = 300)
