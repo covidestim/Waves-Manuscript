@@ -6,13 +6,6 @@
 ### across a hexgrid (hexObs)
 ###############################################################################
 
-### testing parameters
-infThreshold <- 165 ##daily infections per capita
-t <- as.Date("2021-08-18")
-hexObs <- CAR_lag_delta
-hexgrid <- readRDS("data-products/hexgrid.rds")
-###
-
 idWavefront <- function(hexObs,
                         hexgrid,
                         infThreshold,
@@ -35,8 +28,8 @@ idWavefront <- function(hexObs,
         print(paste("No hexes identified above threshold of", infThreshold, 
                     "infections per day. Maximum infections estimated on", t,
                     "is", 
-                    round(max((hexObs %>% dplyr::filter(date == t))[,"infectionsPC"])*1e5)))
-        break()
+                    round(max((hexObs %>% dplyr::filter(date == t))[,"mean"])*1e5)))
+        # break()
     } else{
         print(paste("Identified", sum(filtHexObs$wavefront), 
                     "hexes with daily infections per capita greater than", 

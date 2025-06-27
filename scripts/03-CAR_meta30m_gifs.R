@@ -161,7 +161,7 @@ unlist()
 
 animation2 <- frame_files%>% 
 magick::image_read() %>% 
-magick::image_animate(fps = 4, 
+magick::image_animate(fps = 2, 
     optimize = T)
 
 animation2
@@ -187,7 +187,7 @@ frame_files <- frame_files |>
 
 animation3 <- frame_files%>% 
   magick::image_read() %>% 
-  magick::image_animate(fps = 4, 
+  magick::image_animate(fps = 2, 
                         optimize = T)
 
 animation3
