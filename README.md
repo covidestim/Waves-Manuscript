@@ -8,14 +8,15 @@ The repo folder structure is:
     - data-products/ ## All the data generated from the model, such as final runs for the CAR model
     - data-sources/ ## All the source data used by the model, such as Meta30m population estimates and covidestim model observations coded to FIPS.
   - Scripts/ ## Scripts numbered to run the whole analysis, some of the data is not the complete dataset due to a limit on storing files in git.
-      - 01-hexAllocation_Infections_Meta30m.R
-      - 02-CAR_models_meta30m.R
-      - 03-CAR_meta30m_gif.R
-      - 04-manuscript_figures_new.R
-      - Extra-05_contour_plot_new.R
-      - wavefronts.R
+      - 00-manuscript_figures_new.R ## Script to generate all the figures
+      - 01-hexAllocation_Infections_Meta30m.R ## Population and Infections allocation to the hexgrid
+      - 02-CAR_models_meta30m.R ## CAR models running
+      - 03-CAR_meta30m_gif.R ## Wave recruting and expansion .gif creation
+      - 04-Compute_Speed.R ## Wavefront speed calculation and .gif creation
+      - wavefronts.R ## Function to calculate wavefront speed
   - Figures/ ## Folder holding .pdf and .png figures for the manuscript
     - extra_figures/ ## Supplemental figures and extra created figures
+  - img/ ## Folder containing .gif and .mov files of the movies of the wavefront expansion and wavefront speed computation
   - Waves-Manuscript.Rproj ## Rproj
   - README.md ## This file
   - .gitignore ## To keep some of the data untracked and avoid issues with large files stored in git
