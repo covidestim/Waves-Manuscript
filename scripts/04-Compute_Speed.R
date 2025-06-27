@@ -2,6 +2,8 @@
 ###########################        SETUP        ###############################
 ###############################################################################
 # setwd("~/waves")
+rm(list = ls())
+gc()
 
 ### load packages
 library(dplyr)
@@ -15,8 +17,8 @@ first_peak <- as.Date("2020-11-19")
 second_peak <- as.Date("2021-09-04")
 
 ### Read in the stable hex grid
-hexgrid <- readRDS(here("data-products/hexgrid.rds")) %>% 
-  mutate(hexid = as.integer(hexid))
+# hexgrid <- readRDS(here("Data/data-products/hexgrid.rds")) %>% 
+#   mutate(hexid = as.integer(hexid))
 
 hexgrid <- sf::st_read("Data/data-products/hexgrid.geojson")
 
@@ -33,9 +35,7 @@ CAR_lag_first <- obs %>%
                                                    to = first_peak, 
                                                    length.out = 64)) %>% 
   left_join(hexgrid, by = "ID") %>% 
-  st_as_sf() %>% 
-  rename(geometry = x)
-
+  st_as_sf()
 
 CAR_lag_second <- obs %>% 
   filter(date %in% seq.Date(from = (second_peak - 63), 
