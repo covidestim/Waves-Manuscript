@@ -1,6 +1,8 @@
 .git/objects/pack/tmp_pack_q6NR0w
 .Rproj.user
 *.DS_store
+Data/data-products/boundaryPlots/firstWaveModel/boundaryDatafirst.rds
+Data/data-products/boundaryPlots/secondWaveModel/boundaryDatasecond.rds
 Data/data-products/CAR_list_meta30m.RDS
 Data/data-products/hex_spacetime.csv
 Data/data-products/hexid-observations_preomicron_meta30m.csv
