@@ -42,8 +42,7 @@ CAR_lag_second <- obs %>%
                                                    to = second_peak, 
                                                    length.out = 64))  %>% 
   left_join(hexgrid, by = "ID") %>% 
-  st_as_sf() %>% 
-  rename(geometry = x)
+  st_as_sf()
 
 ### Set the infection threshold for the boundary definition
 inf_threshold <- 165
@@ -74,8 +73,20 @@ for(i in -63:0){
     # dev.off()
 }
 
-saveRDS(boundList, file = here("Data/data-products/boundaryPlots/firstWaveModel/boundaryDatafirst.rds"), version = 2)
+# saveRDS(boundList, file = here("Data/data-products/boundaryPlots/firstWaveModel/boundaryDatafirst.rds"), version = 2)
 # boundList <- readRDS("boundaryPlots/first/boundaryDatafirst.rds")
+
+waveList <- list()
+for (i in 1:64) {
+  waveList[[i]] <- as.data.frame(boundList[[i]]["wave"])
+}
+
+wave.df <- bind_rows(waveList)
+
+sf::st_write(obj = wave.df,
+dsn = "Data/data-products/FirstWaveBound.shp",
+delete_dsn = T,
+delete_layer = T)
 
 ###############################################################################
 ########### CALCULATE AND PLOT DISTANCE TO NEAREST POINT ######################
@@ -98,7 +109,7 @@ for (i in 2:length(boundList)){
 }
 
 ### Save for future use ### 
-saveRDS(distanceToFrontier, here("Data/data-products/boundaryPlots/firstWaveModel/firstDistanceToFrontier.rds"), version = 2)
+# saveRDS(distanceToFrontier, here("Data/data-products/boundaryPlots/firstWaveModel/firstDistanceToFrontier.rds"), version = 2)
 
 ## Creating a data.frame for the distance to the front
 distanceToFront.df <- bind_rows(distanceToFrontier) |> 
@@ -172,9 +183,21 @@ for(i in -63:0){
   # dev.off()
 }
 
-saveRDS(boundList, file = "Data/data-products/boundaryPlots/secondWaveModel/boundaryDatasecond.rds", version = 2)
+# saveRDS(boundList, file = "Data/data-products/boundaryPlots/secondWaveModel/boundaryDatasecond.rds", version = 2)
 
 # boundList <- readRDS("boundaryPlots/second/boundaryDatasecond.rds")
+
+waveList <- list()
+for (i in 1:64) {
+  waveList[[i]] <- as.data.frame(boundList[[i]]["wave"])
+}
+
+wave.df <- bind_rows(waveList)
+
+sf::st_write(obj = wave.df,
+dsn = "Data/data-products/SecondWaveBound.shp",
+delete_dsn = T,
+delete_layer = T)
 
 ## calculate growth of wave front 
 growth <- vector()
@@ -192,7 +215,7 @@ for (i in 2:length(boundList)){
 }
 
 ### Save for future use ### 
-saveRDS(distanceToFrontier, here("Data/data-products/boundaryPlots/secondWaveModel/secondDistanceToFrontier.rds"), version = 2)
+# saveRDS(distanceToFrontier, here("Data/data-products/boundaryPlots/secondWaveModel/secondDistanceToFrontier.rds"), version = 2)
 
 ## Creating a data.frame for the distance to the front
 distanceToFront.df <- bind_rows(distanceToFrontier) |> 

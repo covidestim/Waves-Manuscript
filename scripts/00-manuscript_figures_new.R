@@ -1249,61 +1249,225 @@ ggsave(filename = "Figures/fig3.pdf",
 #        height = 9, 
 #        dpi = 300)
 
+hexgrid <- sf::st_read("Data/data-products/hexgrid.geojson")
+
 ## Heatmaps for the velocity
 distanceToFront.df_first <- sf::st_read("Data/data-products/boundaryPlots/firstWaveModel/firstDistanceToFront.shp") |> 
 rename(distToFront = dstTFrn)
 
-
-plt1 <- ggplot() + 
-      geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey90", color = NA) +
-      geom_sf(data=distanceToFront.df_first, 
-  mapping=aes(geometry= geometry, 
-    color=distToFront/1000), size=1.5) +
-      geom_sf(data=distanceToFront.df_first %>% 
-      filter(distToFront ==0), 
-      mapping=aes(geometry= geometry), 
-      color = "black", size=1.5) +
-      scale_color_viridis_b(limits=c(0, 1500), 
-      option = "C", 
-      breaks = c(0,50,100,200, 500, 1000, 1500), 
-      name = "Distance to nearest point\n on boundary at t+1\n(in kms)") +
-      theme_void()+
-      labs(title = "1st Wave")
-plt1
-      
 distanceToFront.df_second <- sf::st_read("Data/data-products/boundaryPlots/secondWaveModel/secondDistanceToFront.shp")|> 
       rename(distToFront = dstTFrn)
-      
-      
+
+wave1Stats <- vroom::vroom("Data/data-sources/wave1Characteristics.csv") |> 
+  mutate(wave = "1st")
+
+wave2Stats <- vroom::vroom("Data/data-sources/wave2Characteristics.csv") |> 
+  mutate(wave = "2nd")
+
+waveStatsJoined <- rbind(wave1Stats, wave2Stats)
+
+fig4a <- ggplot()+
+  geom_col(data = waveStatsJoined,
+           aes(x = `Days before peak`, y = `Recruitment rate (km2/day)`, fill = wave),
+           alpha = 0.75,
+           position = position_dodge())+
+  geom_vline(xintercept = 7, color = "grey80", lty = "dashed")+
+  geom_vline(xintercept = seq(7,63,7), lty = "dotted", color = "grey50")+
+  theme_minimal()+
+  labs(x = "Days before national curve peak", 
+       y = "Recruitment rate \n [km2/day]")+
+  scale_x_reverse(breaks = seq(7,63,7))+
+  theme(legend.position = c(0.10,0.90),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(hjust = 0.5),
+        axis.text = element_text(size = 12))
+fig4a
+
+firstBound <- st_read("Data/data-products/firstWaveBound.shp")
+secondBound <- st_read("Data/data-products/secondWaveBound.shp")
+
+## first wave panels
+
+date_displayed <- alpha_peak-63
+plt1 <- ggplot() + 
+  geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey80") +
+  geom_sf(data=firstBound |> 
+    filter(wave_dt ==date_displayed), 
+  mapping=aes(geometry= geometry), fill="grey50") +
+  geom_sf(data=distanceToFront.df_first|> 
+    filter(date ==date_displayed), 
+mapping=aes(geometry= geometry, 
+                                                    color=distToFront/1000), size=1.5) +
+  geom_sf(data=distanceToFront.df_first %>% filter(distToFront ==0)|> 
+    filter(date ==date_displayed), 
+          mapping=aes(geometry= geometry), color = "black", size=1.5) +
+  scale_color_viridis_b(limits=c(0, 1500), option = "C", 
+                        breaks=c(0, 50, 100, 200, 500, 1000, 1500), 
+                        name = "Distance to nearest point\non boundary at t+1\n(in km/day)") +
+      theme_void()+
+      labs(title = date_displayed)
+plt1
+
+date_displayed <- alpha_peak-42
 plt2 <- ggplot() + 
-      geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey90", color = NA) +
-      geom_sf(data=distanceToFront.df_second, 
-        mapping=aes(geometry= geometry, 
-          color=distToFront/1000), size=1.5) +
-      geom_sf(data=distanceToFront.df_second %>% 
-            filter(distToFront ==0), 
-            mapping=aes(geometry= geometry), 
-            color = "black", size=1.5) +
-            scale_color_viridis_b(limits=c(0, 1500), 
-            option = "C", 
-            breaks = c(0,50,100,200, 500, 1000, 1500), 
-            name = "Distance to nearest point\n on boundary at t+1\n(in kms)") +
-            theme_void()+
-            labs(title = "2nd Wave")
+  geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey80") +
+  geom_sf(data=firstBound |> 
+    filter(wave_dt ==date_displayed), 
+  mapping=aes(geometry= geometry), fill="grey50") +
+  geom_sf(data=distanceToFront.df_first|> 
+    filter(date ==date_displayed), 
+mapping=aes(geometry= geometry, 
+                                                    color=distToFront/1000), size=1.5) +
+  geom_sf(data=distanceToFront.df_first %>% filter(distToFront ==0)|> 
+    filter(date ==date_displayed), 
+          mapping=aes(geometry= geometry), color = "black", size=1.5) +
+  scale_color_viridis_b(limits=c(0, 1500), option = "C", 
+                        breaks=c(0, 50, 100, 200, 500, 1000, 1500), 
+                        name = "Distance to nearest point\non boundary at t+1\n(in km/day)") +
+      theme_void()+
+      labs(title = date_displayed)
 plt2
+      
+date_displayed <- alpha_peak-21
+plt3 <- ggplot() + 
+  geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey80") +
+  geom_sf(data=firstBound |> 
+    filter(wave_dt ==date_displayed), 
+  mapping=aes(geometry= geometry), fill="grey50") +
+  geom_sf(data=distanceToFront.df_first|> 
+    filter(date ==date_displayed), 
+mapping=aes(geometry= geometry, 
+                                                    color=distToFront/1000), size=1.5) +
+  geom_sf(data=distanceToFront.df_first %>% filter(distToFront ==0)|> 
+    filter(date ==date_displayed), 
+          mapping=aes(geometry= geometry), color = "black", size=1.5) +
+  scale_color_viridis_b(limits=c(0, 1500), option = "C", 
+                        breaks=c(0, 50, 100, 200, 500, 1000, 1500), 
+                        name = "Distance to nearest point\non boundary at t+1\n(in km/day)") +
+      theme_void()+
+      labs(title = date_displayed)
+plt3
+      
+      
+date_displayed <- alpha_peak
+plt4 <- ggplot() + 
+  geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey80") +
+  geom_sf(data=firstBound |> 
+    filter(wave_dt ==date_displayed), 
+  mapping=aes(geometry= geometry), fill="grey50") +
+  geom_sf(data=distanceToFront.df_first|> 
+    filter(date ==date_displayed), 
+mapping=aes(geometry= geometry, 
+                                                    color=distToFront/1000), size=1.5) +
+  geom_sf(data=distanceToFront.df_first %>% filter(distToFront ==0)|> 
+    filter(date ==date_displayed), 
+          mapping=aes(geometry= geometry), color = "black", size=1.5) +
+  scale_color_viridis_b(limits=c(0, 1500), option = "C", 
+                        breaks=c(0, 50, 100, 200, 500, 1000, 1500), 
+                        name = "Distance to nearest point\non boundary at t+1\n(in km/day)") +
+      theme_void()+
+      labs(title = date_displayed)
+plt4
+
+## Second wave panels
+
+date_displayed <- delta_peak-63
+plt5 <- ggplot() + 
+  geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey80") +
+  geom_sf(data=secondBound |> 
+    filter(wave_dt ==date_displayed), 
+  mapping=aes(geometry= geometry), fill="grey50") +
+  geom_sf(data=distanceToFront.df_second|> 
+    filter(date ==date_displayed), 
+mapping=aes(geometry= geometry, 
+                                                    color=distToFront/1000), size=1.5) +
+  geom_sf(data=distanceToFront.df_second %>% filter(distToFront ==0)|> 
+    filter(date ==date_displayed), 
+          mapping=aes(geometry= geometry), color = "black", size=1.5) +
+  scale_color_viridis_b(limits=c(0, 1500), option = "C", 
+                        breaks=c(0, 50, 100, 200, 500, 1000, 1500), 
+                        name = "Distance to nearest point\non boundary at t+1\n(in km/day)") +
+      theme_void()+
+      labs(title = date_displayed)
+plt5
+
+date_displayed <- delta_peak-42
+plt6 <- ggplot() + 
+  geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey80") +
+  geom_sf(data=secondBound |> 
+    filter(wave_dt ==date_displayed), 
+  mapping=aes(geometry= geometry), fill="grey50") +
+  geom_sf(data=distanceToFront.df_second|> 
+    filter(date ==date_displayed), 
+mapping=aes(geometry= geometry, 
+                                                    color=distToFront/1000), size=1.5) +
+  geom_sf(data=distanceToFront.df_second %>% filter(distToFront ==0)|> 
+    filter(date ==date_displayed), 
+          mapping=aes(geometry= geometry), color = "black", size=1.5) +
+  scale_color_viridis_b(limits=c(0, 1500), option = "C", 
+                        breaks=c(0, 50, 100, 200, 500, 1000, 1500), 
+                        name = "Distance to nearest point\non boundary at t+1\n(in km/day)") +
+      theme_void()+
+      labs(title = date_displayed)
+plt6
+      
+date_displayed <- delta_peak-21
+plt7 <- ggplot() + 
+  geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey80") +
+  geom_sf(data=secondBound |> 
+    filter(wave_dt ==date_displayed), 
+  mapping=aes(geometry= geometry), fill="grey50") +
+  geom_sf(data=distanceToFront.df_second|> 
+    filter(date ==date_displayed), 
+mapping=aes(geometry= geometry, 
+                                                    color=distToFront/1000), size=1.5) +
+  geom_sf(data=distanceToFront.df_second %>% filter(distToFront ==0)|> 
+    filter(date ==date_displayed), 
+          mapping=aes(geometry= geometry), color = "black", size=1.5) +
+  scale_color_viridis_b(limits=c(0, 1500), option = "C", 
+                        breaks=c(0, 50, 100, 200, 500, 1000, 1500), 
+                        name = "Distance to nearest point\non boundary at t+1\n(in km/day)") +
+      theme_void()+
+      labs(title = date_displayed)
+plt7
+      
+      
+date_displayed <- delta_peak
+plt8 <- ggplot() + 
+  geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey80") +
+  geom_sf(data=secondBound |> 
+    filter(wave_dt ==date_displayed), 
+  mapping=aes(geometry= geometry), fill="grey50") +
+  geom_sf(data=distanceToFront.df_second|> 
+    filter(date ==date_displayed), 
+mapping=aes(geometry= geometry, 
+                                                    color=distToFront/1000), size=1.5) +
+  geom_sf(data=distanceToFront.df_second %>% filter(distToFront ==0)|> 
+    filter(date ==date_displayed), 
+          mapping=aes(geometry= geometry), color = "black", size=1.5) +
+  scale_color_viridis_b(limits=c(0, 1500), option = "C", 
+                        breaks=c(0, 50, 100, 200, 500, 1000, 1500), 
+                        name = "Distance to nearest point\non boundary at t+1\n(in km/day)") +
+      theme_void()+
+      labs(title = date_displayed)
+plt8
+
             
 library(patchwork)
-heatmap_waves <- (plt1 | plt2)+
-            plot_layout(guides = "collect") 
-heatmap_waves
+fig4 <- ((plt1 | plt2 | plt3 | plt4)+
+  plot_layout(guides = "collect")) /
+  (fig4a) /
+    ((plt5 | plt6 | plt7 | plt8)+
+      plot_layout(guides = "collect"))
+fig4
             
-ggsave(plot = heatmap_waves,
+ggsave(plot = fig4,
               filename = "Figures/fig4.png",
               width = 16,
               height = 9,
               dpi = 300)
               
-ggsave(plot = heatmap_waves,
+ggsave(plot = fig4,
                 filename = "Figures/fig4.pdf",
                 width = 16,
                 height = 9,
