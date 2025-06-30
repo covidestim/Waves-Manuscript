@@ -1283,6 +1283,8 @@ fig4a <- ggplot()+
         axis.text = element_text(size = 12))
 fig4a
 
+ggsave(plot = fig4a, filename = "Figures/fig4a.png", width = 16, height = 9, dpi = 300)
+
 firstBound <- st_read("Data/data-products/firstWaveBound.shp")
 secondBound <- st_read("Data/data-products/secondWaveBound.shp")
 
@@ -1290,10 +1292,10 @@ secondBound <- st_read("Data/data-products/secondWaveBound.shp")
 
 date_displayed <- alpha_peak-63
 plt1 <- ggplot() + 
-  geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey80") +
+  geom_sf(data=hexgrid, mapping=aes(geometry= geometry, fill="Hex in a wave")) +
   geom_sf(data=firstBound |> 
     filter(wave_dt ==date_displayed), 
-  mapping=aes(geometry= geometry), fill="grey50") +
+  mapping=aes(geometry= geometry, fill="Hex not in a wave")) +
   geom_sf(data=distanceToFront.df_first|> 
     filter(date ==date_displayed), 
 mapping=aes(geometry= geometry, 
@@ -1304,16 +1306,18 @@ mapping=aes(geometry= geometry,
   scale_color_viridis_b(limits=c(0, 1500), option = "C", 
                         breaks=c(0, 50, 100, 200, 500, 1000, 1500), 
                         name = "Distance to nearest point\non boundary at t+1\n(in km/day)") +
-      theme_void()+
-      labs(title = date_displayed)
+  scale_fill_manual(values = c("grey80", "grey50"))+
+  guides(fill = guide_legend(override.aes = list(size = 5, shape = 17)))+
+  theme_void()+
+  labs(title = date_displayed)
 plt1
 
 date_displayed <- alpha_peak-42
 plt2 <- ggplot() + 
-  geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey80") +
+  geom_sf(data=hexgrid, mapping=aes(geometry= geometry, fill="Hex in a wave")) +
   geom_sf(data=firstBound |> 
     filter(wave_dt ==date_displayed), 
-  mapping=aes(geometry= geometry), fill="grey50") +
+  mapping=aes(geometry= geometry, fill="Hex not in a wave")) +
   geom_sf(data=distanceToFront.df_first|> 
     filter(date ==date_displayed), 
 mapping=aes(geometry= geometry, 
@@ -1324,16 +1328,18 @@ mapping=aes(geometry= geometry,
   scale_color_viridis_b(limits=c(0, 1500), option = "C", 
                         breaks=c(0, 50, 100, 200, 500, 1000, 1500), 
                         name = "Distance to nearest point\non boundary at t+1\n(in km/day)") +
-      theme_void()+
-      labs(title = date_displayed)
+  scale_fill_manual(values = c("grey80", "grey50"))+
+  guides(fill = guide_legend(override.aes = list(size = 5, shape = 17)))+
+  theme_void()+
+  labs(title = date_displayed)
 plt2
       
 date_displayed <- alpha_peak-21
 plt3 <- ggplot() + 
-  geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey80") +
+  geom_sf(data=hexgrid, mapping=aes(geometry= geometry, fill="Hex in a wave")) +
   geom_sf(data=firstBound |> 
     filter(wave_dt ==date_displayed), 
-  mapping=aes(geometry= geometry), fill="grey50") +
+  mapping=aes(geometry= geometry, fill="Hex not in a wave")) +
   geom_sf(data=distanceToFront.df_first|> 
     filter(date ==date_displayed), 
 mapping=aes(geometry= geometry, 
@@ -1344,17 +1350,18 @@ mapping=aes(geometry= geometry,
   scale_color_viridis_b(limits=c(0, 1500), option = "C", 
                         breaks=c(0, 50, 100, 200, 500, 1000, 1500), 
                         name = "Distance to nearest point\non boundary at t+1\n(in km/day)") +
-      theme_void()+
-      labs(title = date_displayed)
+  scale_fill_manual(values = c("grey80", "grey50"))+
+  guides(fill = guide_legend(override.aes = list(size = 5, shape = 17)))+
+  theme_void()+
+  labs(title = date_displayed)
 plt3
-      
-      
+            
 date_displayed <- alpha_peak
 plt4 <- ggplot() + 
-  geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey80") +
+  geom_sf(data=hexgrid, mapping=aes(geometry= geometry, fill="Hex in a wave")) +
   geom_sf(data=firstBound |> 
     filter(wave_dt ==date_displayed), 
-  mapping=aes(geometry= geometry), fill="grey50") +
+  mapping=aes(geometry= geometry, fill="Hex not in a wave")) +
   geom_sf(data=distanceToFront.df_first|> 
     filter(date ==date_displayed), 
 mapping=aes(geometry= geometry, 
@@ -1365,18 +1372,20 @@ mapping=aes(geometry= geometry,
   scale_color_viridis_b(limits=c(0, 1500), option = "C", 
                         breaks=c(0, 50, 100, 200, 500, 1000, 1500), 
                         name = "Distance to nearest point\non boundary at t+1\n(in km/day)") +
-      theme_void()+
-      labs(title = date_displayed)
+  scale_fill_manual(values = c("grey80", "grey50"))+
+  guides(fill = guide_legend(override.aes = list(size = 5, shape = 17)))+
+  theme_void()+
+  labs(title = date_displayed)
 plt4
 
 ## Second wave panels
 
 date_displayed <- delta_peak-63
 plt5 <- ggplot() + 
-  geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey80") +
+  geom_sf(data=hexgrid, mapping=aes(geometry= geometry, fill="Hex in a wave")) +
   geom_sf(data=secondBound |> 
     filter(wave_dt ==date_displayed), 
-  mapping=aes(geometry= geometry), fill="grey50") +
+  mapping=aes(geometry= geometry, fill="Hex not in a wave")) +
   geom_sf(data=distanceToFront.df_second|> 
     filter(date ==date_displayed), 
 mapping=aes(geometry= geometry, 
@@ -1387,16 +1396,18 @@ mapping=aes(geometry= geometry,
   scale_color_viridis_b(limits=c(0, 1500), option = "C", 
                         breaks=c(0, 50, 100, 200, 500, 1000, 1500), 
                         name = "Distance to nearest point\non boundary at t+1\n(in km/day)") +
-      theme_void()+
-      labs(title = date_displayed)
+  scale_fill_manual(values = c("grey80", "grey50"))+
+  guides(fill = guide_legend(override.aes = list(size = 5, shape = 17)))+
+  theme_void()+
+  labs(title = date_displayed)
 plt5
 
 date_displayed <- delta_peak-42
 plt6 <- ggplot() + 
-  geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey80") +
+  geom_sf(data=hexgrid, mapping=aes(geometry= geometry, fill="Hex in a wave")) +
   geom_sf(data=secondBound |> 
     filter(wave_dt ==date_displayed), 
-  mapping=aes(geometry= geometry), fill="grey50") +
+  mapping=aes(geometry= geometry, fill="Hex not in a wave")) +
   geom_sf(data=distanceToFront.df_second|> 
     filter(date ==date_displayed), 
 mapping=aes(geometry= geometry, 
@@ -1407,16 +1418,18 @@ mapping=aes(geometry= geometry,
   scale_color_viridis_b(limits=c(0, 1500), option = "C", 
                         breaks=c(0, 50, 100, 200, 500, 1000, 1500), 
                         name = "Distance to nearest point\non boundary at t+1\n(in km/day)") +
-      theme_void()+
-      labs(title = date_displayed)
+  scale_fill_manual(values = c("grey80", "grey50"))+
+  guides(fill = guide_legend(override.aes = list(size = 5, shape = 17)))+
+  theme_void()+
+  labs(title = date_displayed)
 plt6
       
 date_displayed <- delta_peak-21
 plt7 <- ggplot() + 
-  geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey80") +
+  geom_sf(data=hexgrid, mapping=aes(geometry= geometry, fill="Hex in a wave")) +
   geom_sf(data=secondBound |> 
     filter(wave_dt ==date_displayed), 
-  mapping=aes(geometry= geometry), fill="grey50") +
+  mapping=aes(geometry= geometry, fill="Hex not in a wave")) +
   geom_sf(data=distanceToFront.df_second|> 
     filter(date ==date_displayed), 
 mapping=aes(geometry= geometry, 
@@ -1427,17 +1440,19 @@ mapping=aes(geometry= geometry,
   scale_color_viridis_b(limits=c(0, 1500), option = "C", 
                         breaks=c(0, 50, 100, 200, 500, 1000, 1500), 
                         name = "Distance to nearest point\non boundary at t+1\n(in km/day)") +
-      theme_void()+
-      labs(title = date_displayed)
+  scale_fill_manual(values = c("grey80", "grey50"))+
+  guides(fill = guide_legend(override.aes = list(size = 5, shape = 17)))+
+  theme_void()+
+  labs(title = date_displayed)
 plt7
       
       
 date_displayed <- delta_peak
 plt8 <- ggplot() + 
-  geom_sf(data=hexgrid, mapping=aes(geometry= geometry), fill="grey80") +
+  geom_sf(data=hexgrid, mapping=aes(geometry= geometry, fill="Hex in a wave")) +
   geom_sf(data=secondBound |> 
     filter(wave_dt ==date_displayed), 
-  mapping=aes(geometry= geometry), fill="grey50") +
+  mapping=aes(geometry= geometry, fill="Hex not in a wave")) +
   geom_sf(data=distanceToFront.df_second|> 
     filter(date ==date_displayed), 
 mapping=aes(geometry= geometry, 
@@ -1448,29 +1463,30 @@ mapping=aes(geometry= geometry,
   scale_color_viridis_b(limits=c(0, 1500), option = "C", 
                         breaks=c(0, 50, 100, 200, 500, 1000, 1500), 
                         name = "Distance to nearest point\non boundary at t+1\n(in km/day)") +
-      theme_void()+
-      labs(title = date_displayed)
+  scale_fill_manual(values = c("grey80", "grey50"))+
+  guides(fill = guide_legend(override.aes = list(size = 5, shape = 17)))+
+  theme_void()+
+  labs(title = date_displayed)
 plt8
 
             
 library(patchwork)
-fig4 <- ((plt1 | plt2 | plt3 | plt4)+
-  plot_layout(guides = "collect")) /
-  (fig4a) /
-    ((plt5 | plt6 | plt7 | plt8)+
-      plot_layout(guides = "collect"))
+fig4 <- (((plt1 / plt2 / plt3 / plt4)) |
+  # (fig4a) /
+    ((plt5 / plt6 / plt7 / plt8)))+
+      plot_layout(guides = "collect")
 fig4
             
 ggsave(plot = fig4,
-              filename = "Figures/fig4.png",
-              width = 16,
-              height = 9,
+              filename = "Figures/fig4_no_center.png",
+              width = 9,
+              height = 14,
               dpi = 300)
               
 ggsave(plot = fig4,
-                filename = "Figures/fig4.pdf",
-                width = 16,
-                height = 9,
+                filename = "Figures/fig4_no_center.pdf",
+                width = 9,
+                height = 14,
                 dpi = 300)
 
 ##
